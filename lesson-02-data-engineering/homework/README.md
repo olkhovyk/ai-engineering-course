@@ -1,146 +1,64 @@
-# Lesson 2: Data Engineering for AI — Homework
+# Lesson 2: Data Engineering — Homework
 
 ## Що потрібно зробити
 
-Ви маєте готовий ingestion pipeline, який парсить документи (PDF, DOCX, HTML, XLSX), розбиває на чанки та зберігає з версіонуванням. Ваше завдання — запустити його, зрозуміти як він працює, та пройти всі кроки нижче.
+Відкрити `homework.ipynb` і реалізувати 6 функцій для обробки "брудних" enterprise-документів. Кожне завдання має заготовку з `# TODO`.
+
+Після виконання — запустити `evaluate.py` для перевірки. Потрібно набрати >= 90%.
 
 ---
 
-## Крок 1: Налаштування середовища
+## Крок 1: Встановити залежності
 
 ```bash
 cd homework/
-
 python -m venv .venv
-source .venv/bin/activate  # macOS/Linux
-
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
 ---
 
-## Крок 2: Згенерувати тестові документи
+## Крок 2: Відкрити notebook
 
-```bash
-python src/generate_samples.py
-```
+Відкрийте `homework.ipynb` в Jupyter або VSCode.
 
-Це створить файли у папці `samples/` — PDF, DOCX, HTML для тестування.
+Запустіть першу комірку — вона згенерує тестові документи в `samples/enterprise_challenges/`.
 
 ---
 
-## Крок 3: Запустити pipeline у звичайному режимі
+## Крок 3: Виконати завдання
 
-```bash
-python src/main.py
-```
+Notebook містить 6 завдань. В кожному є функція з `# TODO` — дописуйте код замість заглушок.
 
-Подивіться на вивід — скільки документів оброблено, скільки чанків створено. Результати зберігаються у `data/processed/`.
+| Завдання | Функція | Що робить |
+| --- | --- | --- |
+| 1 | `detect_and_read()` | Визначає кодування файлу і декодує текст |
+| 2 | `detect_file_type()` | Визначає реальний тип файлу по magic bytes |
+| 3 | `extract_clean_text()` | Витягує чистий текст з брудного HTML |
+| 4 | `safe_parse()` | Парсить документ без crash-ів, класифікує помилки |
+| 5 | `DeadLetterQueue` + `process_all()` | Зберігає зламані файли в окрему папку з error report |
+| 6 | `chunk_text()` | Розбиває великий текст на чанки для AI |
 
----
-
-## Крок 4: Запустити pipeline у resilient режимі
-
-Спочатку згенеруйте "погані" документи:
-
-```bash
-python src/generate_bad_samples.py
-```
-
-Потім запустіть pipeline з валідацією та quarantine:
-
-```bash
-python src/main.py --input samples/enterprise_challenges --resilient
-```
-
-Перевірте що потрапило у карантин:
-
-```bash
-ls data/quarantine/
-```
+Після кожного завдання є тестова комірка — запустіть її щоб перевірити результат.
 
 ---
 
-## Крок 5: Streaming режим (file watcher)
+## Крок 4: Перевірити результат
 
 ```bash
-python src/main.py --watch
+python evaluate.py
 ```
 
-Pipeline буде слідкувати за папкою `samples/` — спробуйте скопіювати туди новий файл і побачити як він автоматично обробляється.
+Evaluator прогонить ваші функції на тестових файлах і покаже бали по кожному завданню.
+
+- **>= 90%** — відмінно
+- **>= 70%** — добре, але є що покращити
+- **< 70%** — перевірте завдання з `[FAIL]`
 
 ---
 
-## Крок 6: Запустити тести
+## Додатково
 
-```bash
-pytest tests/ -v
-```
-
-Всі тести повинні проходити.
-
----
-
-## Крок 7: Вивчити код
-
-Пройдіться по основних файлах та зрозумійте як працює кожен компонент:
-
-| Файл | Що робить |
-|---|---|
-| `src/main.py` | Точка входу, запуск pipeline |
-| `src/parsers/router.py` | Роутер — визначає тип файлу та парсить через `unstructured` |
-| `src/parsers/base.py` | Модель даних `ParsedDocument` |
-| `src/ingestion/pipeline.py` | Головний pipeline — з'єднує парсинг, чанкінг, версіонування |
-| `src/ingestion/chunker.py` | Розбиття тексту на чанки (fixed size / sentence) |
-| `src/ingestion/resilience.py` | Валідація файлів, retry, quarantine для поганих файлів |
-| `src/streaming/watcher.py` | File watcher — слідкує за новими файлами |
-| `src/streaming/queue.py` | Async черга документів |
-| `src/streaming/batcher.py` | Батчинг — групує документи для обробки |
-| `src/versioning/version_store.py` | Версіонування — зберігає snapshot кожного прогону |
-| `configs/pipeline.yaml` | Конфігурація pipeline |
-
----
-
-## Крок 8: Прочитати CHALLENGES.md
-
-```bash
-cat CHALLENGES.md
-```
-
-Тут описані 12 реальних enterprise-проблем з документами (corrupted files, wrong encoding, password-protected PDFs тощо) та як pipeline їх вирішує.
-
----
-
-## Структура проєкту
-
-```
-homework/
-├── src/
-│   ├── main.py                  — Точка входу
-│   ├── generate_samples.py      — Генерація тестових документів
-│   ├── generate_bad_samples.py  — Генерація "поганих" документів
-│   ├── parsers/
-│   │   ├── base.py              — ParsedDocument dataclass
-│   │   └── router.py            — ParserRouter (unstructured)
-│   ├── ingestion/
-│   │   ├── pipeline.py          — IngestionPipeline
-│   │   ├── chunker.py           — Chunker
-│   │   └── resilience.py        — FileValidator, ResilientParser, DeadLetterQueue
-│   ├── streaming/
-│   │   ├── watcher.py           — FileWatcher
-│   │   ├── queue.py             — DocumentQueue
-│   │   └── batcher.py           — Batcher
-│   └── versioning/
-│       └── version_store.py     — VersionStore
-├── configs/
-│   └── pipeline.yaml
-├── samples/                     — Тестові документи (генеруються)
-├── data/
-│   ├── processed/               — Результати обробки
-│   ├── quarantine/              — Файли що не пройшли валідацію
-│   └── versions/                — Версії snapshots
-├── tests/                       — Тести
-├── requirements.txt
-├── CHALLENGES.md
-└── README.md                    — Цей файл
-```
+- Подивіться готовий production pipeline в `src/` — там є reference implementation
+- Прочитайте `CHALLENGES.md` — опис 18 enterprise-проблем з документами
