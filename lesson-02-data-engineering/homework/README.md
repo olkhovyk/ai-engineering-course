@@ -23,7 +23,7 @@ pip install -r requirements.txt
 
 Відкрийте `homework.ipynb` в Jupyter або VSCode.
 
-Запустіть першу комірку — вона згенерує тестові документи в `samples/enterprise_challenges/`.
+Запустіть першу комірку — вона покаже список тестових документів в `samples/enterprise_challenges/`.
 
 ---
 
