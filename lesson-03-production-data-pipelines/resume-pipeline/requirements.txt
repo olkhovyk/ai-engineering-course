@@ -1,0 +1,14 @@
+# PDF extraction
+pdfplumber>=0.10.0
+
+# LLM
+openai>=1.0.0
+
+# Environment
+python-dotenv>=1.0.0
+
+# dbt + DuckDB (transformation layer)
+dbt-duckdb>=1.7.0
+
+# Airflow (optional — for orchestration)
+# apache-airflow>=2.8.0

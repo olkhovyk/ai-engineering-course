@@ -1,0 +1,13 @@
+name: 'resume_pipeline'
+version: '1.0.0'
+config-version: 2
+
+profile: 'resume_pipeline'
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target"]
+
+models:
+  resume_pipeline:
+    +materialized: table
