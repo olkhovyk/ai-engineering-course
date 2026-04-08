@@ -82,12 +82,12 @@ def task_score(**kwargs):
     """Task 3: Score each resume against job description with LLM."""
     _add_to_path()
 
+    from score import score_resume, JOB_DESCRIPTION  # also loads .env
+
     api_key = os.environ.get("OPENAI_KEY") or os.environ.get("OPENAI_API_KEY")
     if not api_key:
         print("WARNING: No OPENAI_KEY — skipping LLM scoring")
         return None
-
-    from score import score_resume, JOB_DESCRIPTION
 
     input_path = os.path.join(OUTPUT_DIR, "preprocessed_resumes.json")
     with open(input_path) as f:

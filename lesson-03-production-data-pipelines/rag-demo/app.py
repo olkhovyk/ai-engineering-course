@@ -60,6 +60,16 @@ def _render_sidebar() -> dict:
             chunk_overlap = st.slider("Overlap (chars)", 0, 200, 50, 10)
 
         st.divider()
+        st.header("Metadata Filters")
+        filter_year = st.selectbox("Min year", [None, 2022, 2023, 2024], index=0,
+                                   format_func=lambda x: "All years" if x is None else f"{x}+")
+        filter_dept = st.selectbox("Department", ["All"] + [
+            "Patient Services", "Billing", "Laboratory", "Pharmacy",
+            "Administration", "Compliance", "Clinical",
+        ])
+        filter_version = st.toggle("Exclude outdated/duplicate docs", value=False)
+
+        st.divider()
         st.header("Data")
         use_sample = st.button("Load sample clinic data", type="primary")
 
@@ -68,6 +78,8 @@ def _render_sidebar() -> dict:
         "summarize": step_summarize, "chunk": step_chunk,
         "chunk_strategy": chunk_strategy, "chunk_size": chunk_size,
         "chunk_overlap": chunk_overlap, "use_sample": use_sample,
+        "filter_year": filter_year, "filter_dept": filter_dept,
+        "filter_version": filter_version,
     }
 
 
@@ -204,12 +216,34 @@ def main():
     if "docs" not in st.session_state:
         st.session_state["docs"] = None
     if cfg["use_sample"]:
-        st.session_state["docs"] = [d["text"] for d in load_docs_from_folder()]
+        st.session_state["docs"] = load_docs_from_folder()
 
-    raw_texts = st.session_state.get("docs")
-    if raw_texts is None:
+    all_docs = st.session_state.get("docs")
+    if all_docs is None:
         st.info("Click **'Load sample clinic data'** in the sidebar to start.")
         return
+
+    # Metadata filtering
+    docs = list(all_docs)
+    if cfg["filter_year"]:
+        docs = [d for d in docs if (d["metadata"].get("year") or 9999) >= cfg["filter_year"]]
+    if cfg["filter_dept"] != "All":
+        docs = [d for d in docs if d["metadata"].get("department") == cfg["filter_dept"]]
+    if cfg["filter_version"]:
+        docs = [d for d in docs if d["metadata"].get("version") == "current"]
+
+    if not docs:
+        st.warning("No documents match the selected filters.")
+        return
+
+    raw_texts = [d["text"] for d in docs]
+
+    # Show metadata summary
+    with st.expander(f"Loaded {len(docs)}/{len(all_docs)} documents (metadata filtered)"):
+        for d in docs:
+            m = d["metadata"]
+            yr = m.get("year") or "?"
+            st.text(f"  {d['source']:<50} dept={m['department']:<20} year={yr}  version={m['version']}")
 
     # Pipeline
     texts, chunks, log = _run_pipeline(raw_texts, cfg, api_key)
