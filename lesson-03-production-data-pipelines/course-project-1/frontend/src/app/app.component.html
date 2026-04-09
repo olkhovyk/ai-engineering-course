@@ -1,0 +1,17 @@
+<nav class="navbar">
+  <div class="navbar-brand">DC Multi-Agent System</div>
+  <div class="navbar-links">
+    <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
+    <a routerLink="/schedule" routerLinkActive="active">Schedule</a>
+    <a routerLink="/staff" routerLinkActive="active">Staff</a>
+    <a routerLink="/simulation" routerLinkActive="active">Simulation</a>
+    <a routerLink="/notifications" routerLinkActive="active" class="notifications-link">
+      Notifications
+      <span class="badge" *ngIf="notificationCount > 0">{{ notificationCount }}</span>
+    </a>
+  </div>
+</nav>
+
+<main class="content">
+  <router-outlet></router-outlet>
+</main>
