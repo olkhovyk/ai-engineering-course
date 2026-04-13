@@ -1,0 +1,23 @@
+artifact_path: /Users/andriibilous/Documents/ai-engineering-course/lesson-04-ml-in-production/credit-scoring-demo/mlruns/1/models/m-3c5b666fe7b64b2cadaa9274bb09471f/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.11.8
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.8.0
+    skops_trusted_types: null
+mlflow_version: 3.11.1
+model_id: m-3c5b666fe7b64b2cadaa9274bb09471f
+model_size_bytes: 375814
+model_uuid: m-3c5b666fe7b64b2cadaa9274bb09471f
+prompts: null
+run_id: 1e372b80edf746f0b1d0596cfadf70d4
+utc_time_created: '2026-04-13 16:22:33.745489'

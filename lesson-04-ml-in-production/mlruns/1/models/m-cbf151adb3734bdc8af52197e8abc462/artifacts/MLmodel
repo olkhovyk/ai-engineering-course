@@ -1,0 +1,23 @@
+artifact_path: /Users/andriibilous/Documents/ai-engineering-course/lesson-04-ml-in-production/mlruns/1/models/m-cbf151adb3734bdc8af52197e8abc462/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.11.8
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.8.0
+    skops_trusted_types: null
+mlflow_version: 3.11.1
+model_id: m-cbf151adb3734bdc8af52197e8abc462
+model_size_bytes: 31521
+model_uuid: m-cbf151adb3734bdc8af52197e8abc462
+prompts: null
+run_id: 41af19edd400475ca1b82ccd2b65946a
+utc_time_created: '2026-04-13 16:02:50.385384'
