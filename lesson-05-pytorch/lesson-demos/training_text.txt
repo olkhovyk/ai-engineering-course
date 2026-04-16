@@ -1,0 +1,500 @@
+Transformers have become the dominant architecture for large language models.
+Self-attention allows every token to interact with every other token in the sequence.
+Pretraining on large text corpora gives language models broad general knowledge.
+Fine-tuning adapts a base model to a specific domain or task.
+RLHF aligns model outputs with human preferences through reward modeling.
+LoRA enables efficient fine-tuning by training small low-rank adapter matrices.
+Quantization reduces model size by storing weights in lower precision formats.
+Int8 and int4 quantization are popular for running large models on consumer hardware.
+Mixture of experts models route tokens to a sparse subset of parameters.
+Diffusion models generate images by iteratively denoising random noise.
+Text to image models like Stable Diffusion use a denoising U-Net with text conditioning.
+Multimodal models can process images, audio, and text within a single system.
+Vision language models combine a vision encoder with a language decoder.
+CLIP learns a joint embedding space for images and captions through contrastive learning.
+Retrieval augmented generation grounds language model outputs in external documents.
+A RAG pipeline usually combines a vector store with a generative model.
+Vector databases store dense embeddings for efficient similarity search.
+Approximate nearest neighbor search uses HNSW or IVF indexes for speed.
+Embedding models convert text into fixed dimensional vectors.
+Chunking strategies strongly affect the quality of retrieval results.
+Agents use language models to plan and execute multi step tasks.
+Tool use lets an agent call APIs, run code, or query databases.
+Function calling provides a structured interface for invoking external tools.
+ReAct prompting interleaves reasoning steps with actions.
+Chain of thought prompting improves performance on reasoning tasks.
+Few shot prompting provides examples inside the context window.
+Zero shot prompting asks the model to perform a task with no examples.
+System prompts shape the persona and behavior of an assistant.
+Temperature controls the randomness of sampled tokens.
+Top p sampling truncates the distribution to the smallest set exceeding a probability mass.
+Top k sampling restricts sampling to the k most likely tokens.
+Beam search keeps the top several hypotheses at each generation step.
+Greedy decoding always selects the highest probability token.
+Speculative decoding uses a small draft model to accelerate a larger one.
+The KV cache stores previously computed keys and values during autoregressive generation.
+Paged attention manages the KV cache in fixed sized blocks to reduce fragmentation.
+Continuous batching improves GPU utilization for online inference.
+Streaming responses send tokens to the client as soon as they are generated.
+Latency matters more than throughput for interactive chat applications.
+Throughput matters more than latency for batch processing workloads.
+Context windows now reach hundreds of thousands of tokens in frontier models.
+Long context models use techniques like rotary embeddings and sparse attention.
+Positional encodings give transformers a sense of token order.
+Rotary position embeddings generalize well to longer sequences.
+ALiBi biases attention scores based on token distance.
+Flash attention computes exact attention with reduced memory bandwidth.
+Group query attention shares key value heads across multiple query heads.
+Multi query attention uses a single shared key value head for all queries.
+Layer normalization stabilizes training of deep transformer networks.
+RMSNorm is a simpler alternative to layer normalization used in many modern LLMs.
+SwiGLU activations are common in the feed forward layers of recent models.
+Residual connections enable gradient flow through very deep networks.
+Dropout is rarely used during LLM pretraining at scale.
+Weight decay is a form of regularization that penalizes large weights.
+The AdamW optimizer decouples weight decay from the gradient update.
+Learning rate warmup ramps up the step size at the start of training.
+Cosine decay schedules gradually reduce the learning rate over training.
+Gradient clipping prevents exploding gradients in recurrent and transformer models.
+Mixed precision training uses bfloat16 or float16 to speed up computation.
+Bfloat16 has a wider dynamic range than float16 at the same storage size.
+Tensor parallelism splits individual matrix multiplications across devices.
+Pipeline parallelism distributes consecutive layers across different GPUs.
+Data parallelism replicates the model on each device and splits the batch.
+Fully sharded data parallel partitions model parameters across workers.
+ZeRO optimizer state partitioning reduces memory usage during training.
+Activation checkpointing trades compute for memory by recomputing activations.
+Distributed training requires efficient collective communication primitives.
+NCCL is the standard library for GPU collective operations.
+Ring all reduce synchronizes gradients across workers efficiently.
+GPU clusters are commonly interconnected with InfiniBand or NVLink.
+H100 GPUs offer significant speedups over A100 for transformer workloads.
+TPUs are specialized accelerators designed for deep learning.
+Google uses TPU pods for training its largest language models.
+Custom silicon like Trainium and Inferentia targets specific workloads.
+CUDA kernels provide low level control over GPU computation.
+Triton is a Python first language for writing high performance GPU kernels.
+PyTorch dominates research, while many production systems use optimized runtimes.
+ONNX provides a cross framework format for exchanging models.
+TensorRT optimizes inference for NVIDIA GPUs with kernel fusion and quantization.
+vLLM is a popular open source library for high throughput LLM serving.
+Text generation inference from Hugging Face serves transformer models efficiently.
+llama.cpp runs quantized models on CPUs and consumer devices.
+GGUF is the file format used by llama.cpp for storing model weights.
+Ollama packages local model serving behind a simple command line interface.
+Hugging Face Hub hosts thousands of open weight models.
+Model cards document intended use, limitations, and evaluation of a model.
+Data cards describe the datasets used to train or evaluate a model.
+Dataset curation is often more impactful than model architecture changes.
+Data cleaning removes duplicates, low quality text, and harmful content.
+Deduplication reduces memorization and improves generalization.
+Tokenizers split text into subword units using algorithms like BPE.
+Byte pair encoding builds a vocabulary by merging frequent character pairs.
+SentencePiece is a language agnostic tokenization library.
+Tiktoken is the tokenizer used by many OpenAI models.
+Character level models operate directly on individual characters.
+Byte level tokenizers avoid out of vocabulary tokens.
+Vocabulary size is a key hyperparameter for tokenizer design.
+Context length and vocabulary size both affect memory usage at inference.
+Prompt engineering is the practice of crafting effective model inputs.
+Prompt injection attacks try to override system instructions through user input.
+Jailbreaks attempt to bypass safety measures in aligned models.
+Red teaming probes models for harmful behaviors before deployment.
+Alignment research studies how to make models safe and helpful.
+Constitutional AI uses a set of principles to guide model behavior.
+RLAIF uses AI feedback instead of human feedback for alignment.
+DPO optimizes preferences without a separate reward model.
+Preference data pairs a chosen response with a rejected response.
+Reward hacking occurs when a model exploits flaws in its reward signal.
+Guardrails filter or modify model inputs and outputs at runtime.
+Content moderation classifiers detect harmful or unsafe generations.
+PII detection prevents leaking personally identifiable information.
+Hallucinations are confident but factually incorrect model outputs.
+Grounding responses in retrieved evidence reduces hallucination.
+Citations let users verify the sources of a generated answer.
+Structured output formats like JSON simplify downstream processing.
+JSON mode constrains a model to emit syntactically valid JSON.
+Function calling with schemas enables reliable tool integration.
+Evaluation of LLMs is notoriously difficult and domain specific.
+MMLU is a broad benchmark covering many academic subjects.
+HumanEval measures code generation capability on Python problems.
+GSM8K evaluates grade school math reasoning.
+BIG bench is a collection of diverse language model tasks.
+HELM provides a holistic evaluation framework across many dimensions.
+LM Evaluation Harness standardizes running common benchmarks.
+LLM as a judge uses a strong model to grade outputs of another model.
+Pairwise preference evaluations compare two responses to the same prompt.
+Elo ratings rank models based on pairwise win rates.
+Arena style evaluations collect human votes on head to head comparisons.
+Benchmark contamination happens when test data leaks into training data.
+Decontamination pipelines remove benchmark examples from training corpora.
+Offline evaluation runs on a fixed dataset before deployment.
+Online evaluation measures behavior on live user traffic.
+A B testing compares model versions on real users.
+Shadow traffic sends requests to a new model without affecting responses.
+Canary deployments expose a small fraction of users to a new version.
+Feature flags let teams toggle behaviors without redeploying.
+Observability is critical for operating LLM powered applications.
+Structured logging captures prompts, completions, and metadata.
+Traces connect the spans of a multi step pipeline.
+Metrics track latency, throughput, error rate, and cost.
+Cost per request is often dominated by generated output tokens.
+Prompt caching reuses computation for repeated prefixes.
+Prefix caching can dramatically cut cost for few shot prompts.
+Anthropic and OpenAI both offer prompt caching features.
+Semantic caching returns cached answers for semantically similar queries.
+Response caching must account for personalization and privacy.
+Rate limiting protects backends from overload and abuse.
+Retries with exponential backoff handle transient failures.
+Circuit breakers stop calling failing services until they recover.
+Timeouts bound how long a request can wait for a response.
+Dead letter queues capture messages that fail repeatedly.
+Idempotency keys prevent duplicate side effects from retried requests.
+Feature stores serve consistent features for training and inference.
+Model registries track versions, metrics, and lineage of trained models.
+MLflow is a common open source platform for experiment tracking.
+Weights and Biases offers hosted experiment tracking and visualization.
+Hyperparameter search explores learning rates, batch sizes, and more.
+Bayesian optimization is sample efficient for expensive evaluations.
+Grid search is simple but scales poorly with dimensionality.
+Random search often outperforms grid search for high dimensional spaces.
+Early stopping halts training when validation loss stops improving.
+Checkpoints save model state so training can resume after failure.
+Resumable training is essential for long multi day runs.
+Spot instances reduce training cost but can be preempted at any time.
+Elastic training scales workers up and down dynamically.
+Training data pipelines must keep GPUs fed to avoid idle time.
+Mosaic streaming datasets load shards from object storage efficiently.
+WebDataset is a format for storing large datasets as tar files.
+Data loaders prefetch batches on the CPU while GPUs train.
+Pinned memory speeds up host to device transfers in PyTorch.
+Gradient accumulation simulates larger batches on limited memory.
+Batch size affects both training dynamics and hardware utilization.
+Learning rate scales with batch size up to a critical point.
+Large batch training requires careful tuning of the learning rate.
+Curriculum learning orders training data from easy to hard.
+Data mixing ratios between domains strongly impact final model behavior.
+Ablation studies isolate the effect of individual design choices.
+Scaling laws describe how loss changes with compute, data, and parameters.
+Chinchilla scaling suggested training smaller models on more tokens.
+Emergent abilities appear only above certain scales of compute.
+In context learning allows models to adapt from examples at inference time.
+Instruction tuning teaches models to follow natural language commands.
+SFT stands for supervised fine-tuning on curated demonstrations.
+High quality instruction data is expensive to produce.
+Self instruct methods generate training data using existing models.
+Synthetic data raises concerns about model collapse over time.
+Distillation transfers knowledge from a large teacher to a small student.
+Pruning removes redundant weights from a trained network.
+Sparsity patterns affect whether pruning yields real speedups.
+Structured pruning removes whole channels or heads for hardware friendliness.
+Knowledge distillation combines well with quantization for small fast models.
+Small language models are increasingly capable for focused tasks.
+On device inference preserves privacy and reduces cloud costs.
+Apple, Google, and others are investing heavily in on device AI.
+WebGPU enables running models directly in the browser.
+Transformers.js runs Hugging Face models in JavaScript environments.
+Edge deployment places models near users to reduce latency.
+Latency budgets are shared across retrieval, model, and post processing.
+P50 and P99 latencies tell different stories about user experience.
+Tail latency matters more than average latency for user facing apps.
+Warm pools keep containers ready to absorb traffic spikes.
+Cold starts are a common challenge for serverless inference.
+GPU warm up avoids the first request paying for kernel compilation.
+Autoscaling adjusts capacity in response to load.
+Horizontal pod autoscaling is common for Kubernetes deployments.
+Kubernetes is widely used to orchestrate ML workloads in production.
+Ray distributes Python workloads across clusters.
+Airflow and Dagster orchestrate batch data pipelines.
+Prefect offers a modern alternative for workflow orchestration.
+Feature engineering remains important for classical ML tasks.
+Tabular data still favors gradient boosted trees in many settings.
+XGBoost and LightGBM are widely used for tabular prediction.
+Deep learning dominates unstructured data like text, images, and audio.
+Speech recognition uses models like Whisper for high quality transcription.
+Text to speech models generate natural sounding audio from text.
+Voice cloning raises significant safety and consent concerns.
+Watermarking helps identify AI generated content.
+Provenance metadata records how a piece of media was produced.
+C2PA is an open standard for content provenance.
+Deepfakes threaten trust in digital media.
+AI regulation is emerging in the EU, US, and other jurisdictions.
+The EU AI Act classifies systems by risk level.
+Responsible AI frameworks guide ethical development and deployment.
+Fairness metrics measure disparate impact across demographic groups.
+Bias mitigation techniques include reweighting, resampling, and adversarial training.
+Explainability methods help humans understand model decisions.
+SHAP values attribute predictions to input features.
+Integrated gradients attribute outputs to inputs via path integrals.
+Attention maps offer limited but useful interpretability.
+Mechanistic interpretability reverse engineers internal model circuits.
+Sparse autoencoders extract interpretable features from model activations.
+Activation steering influences model behavior by editing internal representations.
+Representation engineering is an active area of research.
+Model editing updates specific facts without full retraining.
+ROME and MEMIT are methods for targeted knowledge editing.
+Continual learning trains models on new data without forgetting old tasks.
+Catastrophic forgetting is a major challenge in sequential training.
+Replay buffers mix old and new data to retain prior knowledge.
+Parameter efficient fine-tuning reduces the cost of adapting large models.
+Adapters insert small trainable modules into a frozen backbone.
+Prefix tuning prepends learned soft prompts to the input.
+Prompt tuning learns continuous prompts for a specific task.
+P tuning combines prompt tuning with deep parameterization.
+LoRA is often the default choice for practical fine-tuning.
+QLoRA combines 4 bit quantization with LoRA for memory efficiency.
+DoRA decomposes LoRA updates into magnitude and direction.
+Merging adapters into the base model enables zero overhead inference.
+Model merging combines multiple fine-tuned models into one.
+Task vectors describe the change induced by fine-tuning on a task.
+Spherical linear interpolation smoothly blends model weights.
+Ensembles average predictions from multiple models.
+Self consistency samples multiple reasoning paths and votes on answers.
+Tree of thoughts explores a reasoning tree with backtracking.
+Graph of thoughts represents reasoning as a general graph.
+Monte Carlo tree search guides exploration in planning problems.
+AlphaZero combined self play with deep reinforcement learning.
+Reinforcement learning trains agents through trial and error.
+Policy gradient methods optimize expected reward directly.
+PPO is a stable and widely used policy optimization algorithm.
+Value based methods like DQN learn action value functions.
+Model based RL plans using a learned model of the environment.
+World models simulate future states for planning.
+Offline RL learns from logged data without new interaction.
+Imitation learning mimics expert behavior from demonstrations.
+Behavior cloning is the simplest form of imitation learning.
+Inverse reinforcement learning infers rewards from behavior.
+Game playing agents have mastered chess, Go, Dota, and StarCraft.
+Robotics combines perception, planning, and control with learned policies.
+Sim to real transfers policies trained in simulation to physical robots.
+Domain randomization helps policies generalize across environments.
+Vision language action models connect perception to motor control.
+Self driving cars rely on perception, prediction, and planning modules.
+End to end driving models map sensors directly to controls.
+Autonomy requires rigorous testing across many edge cases.
+Safety cases document the argument that a system is acceptably safe.
+Formal verification provides strong guarantees for specific properties.
+Probabilistic guarantees describe expected behavior under uncertainty.
+Uncertainty estimation is critical for trustworthy predictions.
+Conformal prediction produces calibrated prediction intervals.
+Bayesian neural networks place distributions over weights.
+Deep ensembles are a simple and effective uncertainty estimation technique.
+Temperature scaling calibrates softmax probabilities post hoc.
+Out of distribution detection flags inputs unlike the training data.
+Distribution shift degrades model performance over time.
+Concept drift refers to changes in the relationship between inputs and outputs.
+Monitoring data quality catches upstream pipeline issues early.
+Drift detection compares recent data statistics to a reference distribution.
+Model monitoring tracks predictions, inputs, and business metrics.
+Alerting notifies on call engineers when metrics cross thresholds.
+Runbooks document the steps to diagnose and resolve incidents.
+Postmortems capture lessons learned from outages.
+Blameless culture encourages sharing mistakes to improve systems.
+Chaos engineering deliberately injects failures to test resilience.
+Load testing simulates peak traffic before launches.
+Capacity planning ensures enough GPUs are available for expected demand.
+Right sizing instances balances cost and performance.
+Reserved instances and committed use discounts reduce cloud bills.
+Multi cloud strategies avoid vendor lock in but add complexity.
+Kubernetes operators encapsulate operational knowledge as code.
+GitOps manages infrastructure through version controlled declarations.
+Terraform provisions cloud infrastructure in a reproducible way.
+Pulumi lets teams define infrastructure in general purpose languages.
+Docker images package applications with their dependencies.
+Multi stage builds keep production images small and secure.
+Base image hygiene reduces vulnerability exposure.
+Supply chain security protects the software build process.
+SBOM stands for software bill of materials.
+Signed artifacts help verify the origin of code and models.
+Secrets management keeps credentials out of source control.
+Vault and cloud KMS services store and rotate secrets.
+Role based access control limits who can do what in a system.
+Audit logs record administrative actions for compliance.
+SOC 2 and ISO 27001 are common security compliance frameworks.
+GDPR imposes strict rules on processing personal data in the EU.
+HIPAA governs health information in the United States.
+Data residency requirements affect where models and data can live.
+Privacy preserving machine learning includes federated learning and differential privacy.
+Federated learning trains models across devices without centralizing data.
+Differential privacy adds calibrated noise to protect individual records.
+Homomorphic encryption enables computation on encrypted data.
+Secure multi party computation splits computation across mutually distrusting parties.
+Confidential computing uses hardware enclaves to protect data in use.
+Trusted execution environments provide isolated compute on the cloud.
+Prompt leakage can expose confidential system instructions to users.
+Data exfiltration via tool use is a growing concern for agents.
+Least privilege restricts tools to only the capabilities they need.
+Sandboxing isolates untrusted code and tool executions.
+Human in the loop approval gates consequential agent actions.
+Approval budgets bound the damage a single agent can cause.
+Asynchronous agents work on tasks over extended periods of time.
+Autonomous agents take actions without per step human review.
+Multi agent systems decompose tasks across specialized agents.
+Orchestrator worker patterns coordinate agent teams.
+Agent memory stores experiences across sessions.
+Episodic memory recalls specific past events.
+Semantic memory stores general knowledge about the world.
+Procedural memory encodes learned skills and habits.
+Vector memory retrieves past interactions by similarity.
+Knowledge graphs structure facts as entities and relations.
+GraphRAG augments retrieval with graph structure.
+Hybrid search combines dense and sparse retrieval for better recall.
+BM25 is a classic sparse retrieval algorithm based on term frequency.
+Reranking models reorder initial candidates for higher precision.
+Cross encoders jointly encode the query and document for scoring.
+Bi encoders encode query and document independently for fast search.
+ColBERT uses late interaction for efficient fine grained matching.
+Splade produces learned sparse representations for retrieval.
+Query expansion adds related terms to improve recall.
+Hypothetical document embeddings generate answers to embed for retrieval.
+Multi vector representations encode documents as several embeddings.
+Embedding drift requires periodic re embedding of indexed content.
+Incremental indexing handles continuously updating corpora.
+Document processing extracts text from PDFs, slides, and images.
+OCR converts scanned images into searchable text.
+Layout aware parsing preserves tables and document structure.
+Unstructured is a popular library for document ingestion.
+LlamaIndex provides abstractions for building RAG applications.
+LangChain offers composable components for LLM applications.
+LangGraph models agent workflows as directed graphs.
+Semantic Kernel is Microsoft's framework for AI orchestration.
+Haystack focuses on production ready NLP pipelines.
+DSPy programs LLM pipelines with automatic prompt optimization.
+Instructor adds typed structured outputs to LLM calls.
+Guidance constrains generation to match templates.
+Outlines supports regex and grammar constrained decoding.
+Structured decoding enforces valid formats without retries.
+Constrained decoding is essential for reliable tool calling.
+Streaming structured outputs requires incremental parsers.
+Server sent events are commonly used to stream tokens to browsers.
+WebSockets provide bidirectional streaming when needed.
+gRPC offers efficient binary protocols for service to service traffic.
+Protocol buffers define strongly typed service interfaces.
+REST APIs remain popular for external facing endpoints.
+OpenAPI specifications document REST APIs in a standard format.
+GraphQL lets clients request exactly the fields they need.
+API gateways centralize authentication, routing, and rate limiting.
+Service meshes manage traffic between microservices.
+Envoy and Istio are common components of service mesh stacks.
+Observability pillars are metrics, logs, and traces.
+OpenTelemetry standardizes instrumentation across languages.
+Prometheus scrapes metrics from application endpoints.
+Grafana visualizes time series metrics and logs.
+Datadog, New Relic, and Honeycomb offer hosted observability platforms.
+Langfuse and LangSmith specialize in LLM application traces.
+Phoenix from Arize focuses on evaluating AI applications.
+Evals as code version control test cases alongside application code.
+Regression evals catch prompt and model changes that hurt quality.
+Golden datasets capture canonical inputs and expected outputs.
+Property based testing explores many inputs against invariants.
+Fuzz testing finds crashes and safety violations through random inputs.
+Adversarial testing probes for worst case behavior.
+Stress testing pushes systems beyond expected limits.
+Benchmark saturation suggests a test no longer discriminates between models.
+Harder benchmarks are continuously developed as models improve.
+GPQA tests graduate level science reasoning.
+SWE-bench measures code fixing ability on real GitHub issues.
+Agent benchmarks evaluate multi step tool use and planning.
+AutoBench and related tools generate evaluations automatically.
+Benchmarks should match real user needs, not just appear impressive.
+User research informs which capabilities actually matter.
+Product thinking is essential for AI engineering.
+Dogfooding your own product surfaces real usability issues.
+Analytics reveal how users actually interact with AI features.
+Session replays show the end to end user journey.
+Feedback buttons collect explicit signals from users.
+Implicit feedback includes time on task and retry rates.
+Offline data collection feeds future model training and evaluation.
+Annotation platforms like Scale and Surge collect human labels.
+Internal annotation teams often yield higher quality data.
+Inter annotator agreement measures labeling reliability.
+Active learning selects the most informative examples to label.
+Uncertainty sampling queries labels for the most uncertain predictions.
+Weak supervision combines noisy labeling functions into probabilistic labels.
+Snorkel pioneered programmatic weak supervision at scale.
+Self training uses model predictions as additional training labels.
+Semi supervised learning leverages unlabeled data with small labeled sets.
+Consistency regularization encourages stable predictions under perturbations.
+Contrastive learning pulls similar examples together and pushes different ones apart.
+SimCLR, MoCo, and BYOL advanced self supervised image representation learning.
+Masked language modeling is the original BERT style pretraining objective.
+Next token prediction is the objective for autoregressive language models.
+Span corruption objectives were used by T5 and related encoder decoder models.
+Encoder decoder models remain strong for translation and summarization.
+Decoder only models dominate general purpose chat assistants.
+Mamba and state space models offer alternatives to transformer attention.
+Linear attention approximates full attention with lower complexity.
+RWKV combines RNN efficiency with transformer training dynamics.
+Hyena uses long convolutions as an alternative attention mechanism.
+Research continues to explore alternatives to quadratic attention.
+Long context models enable entire codebases or books in a single prompt.
+Needle in a haystack tests measure long context retrieval accuracy.
+Lost in the middle effects hurt retrieval from the center of long contexts.
+Position interpolation extends pretrained context windows.
+YaRN is a technique for efficient context length extension.
+Rope scaling parameters adjust how positional encodings generalize.
+Memory efficient attention kernels enable training on longer sequences.
+Context caching reduces cost for chatbots with long system prompts.
+Episodic context summaries compress long histories into short contexts.
+Hierarchical memory organizes information at multiple scales.
+Agents benefit from explicit planning and reflection steps.
+Reflection lets an agent critique and revise its own outputs.
+Self correction reduces errors without external feedback.
+Debate protocols pit models against each other to surface weaknesses.
+Critic models score and improve generator outputs.
+Process supervision rewards reasoning steps, not just final answers.
+OpenAI showed process supervision improves math problem solving.
+Verifier models judge whether an answer is correct.
+Generator verifier gaps motivate new training and inference strategies.
+Inference time compute trades more thinking for better answers.
+OpenAI o1 and similar models scale reasoning with search at test time.
+Best of N sampling picks the highest scoring of several candidates.
+Majority voting aggregates multiple samples for more reliable answers.
+Weighted voting uses confidence scores to combine samples.
+Test time training updates weights on a per example basis.
+Meta learning learns to learn new tasks from few examples.
+MAML optimizes for fast adaptation with gradient based inner loops.
+Prompt based meta learning emerges naturally in large language models.
+Foundation models serve as starting points for many downstream tasks.
+Transfer learning moves knowledge from one task to another.
+Domain adaptation handles shifts between training and deployment data.
+Code models like Codex and CodeLlama specialize in programming tasks.
+Coding assistants generate, complete, and review source code.
+GitHub Copilot integrates code suggestions into the editor.
+Cursor is a code editor designed around AI assistance.
+Devin and similar systems attempt end to end software engineering.
+AI pair programming changes the rhythm of software development.
+Tests, types, and reviews remain essential even with AI assistance.
+Code review by AI can catch issues humans miss and vice versa.
+Documentation generation is a common AI engineering workflow.
+Commit message drafting is another small but useful automation.
+Issue triage can be accelerated with language model classifiers.
+Bug localization uses models to find likely buggy files.
+Program repair models suggest patches for failing tests.
+Formal methods and AI increasingly complement each other.
+Theorem proving assistants benefit from learned tactic suggestions.
+Lean, Coq, and Isabelle are popular interactive theorem provers.
+Mathematical reasoning remains a frontier for language models.
+Symbolic tools like calculators and solvers augment LLM reasoning.
+Wolfram Alpha integrations give models precise numerical answers.
+Python interpreters let agents execute code as a reasoning tool.
+Jupyter notebooks are natural interfaces for exploratory AI work.
+Google Colab offers free GPUs for small scale experiments.
+Kaggle provides datasets, notebooks, and competitions for learning.
+Hugging Face Spaces hosts interactive AI demos.
+Gradio builds quick web UIs for ML models.
+Streamlit enables rapid data app development in Python.
+FastAPI is a popular Python framework for production APIs.
+Flask remains widely used for simple services.
+Django powers many larger Python web applications.
+Next.js and similar frameworks dominate modern frontend development.
+Edge runtimes run close to users for low latency.
+Cloudflare Workers, Vercel, and Fly offer global deployment platforms.
+Serverless functions simplify deployment but complicate stateful workloads.
+Container orchestration suits long running stateful services.
+Message queues decouple producers and consumers for resilience.
+Kafka, Pulsar, and NATS are common streaming platforms.
+Event driven architectures scale well for asynchronous workloads.
+CQRS separates read and write models for scalability.
+Event sourcing stores state as a log of immutable events.
+CRDTs enable eventually consistent collaborative applications.
