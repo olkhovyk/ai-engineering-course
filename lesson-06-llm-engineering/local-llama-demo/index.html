@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Llama Demo - LLM Engineering</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h2::before {
+            font-size: 1.3em;
+        }
+
+        .step-container {
+            display: none;
+        }
+
+        .step-container.active {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .setup-list {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.95em;
+            overflow-x: auto;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #e0e0e0;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            line-height: 1.5;
+        }
+
+        .code-block .keyword {
+            color: #569cd6;
+        }
+
+        .code-block .string {
+            color: #ce9178;
+        }
+
+        .code-block .function {
+            color: #dcdcaa;
+        }
+
+        .code-block .comment {
+            color: #6a9955;
+        }
+
+        .interactive-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f0f4ff;
+            border-radius: 8px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .output-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border: 2px solid #e0e0e0;
+            display: none;
+        }
+
+        .output-section.visible {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        .output-label {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .output-text {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #333;
+            word-break: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .status.visible {
+            display: block;
+        }
+
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #28a745;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            background: none;
+            color: #666;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .comparison-box {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+
+        .comparison-box h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .comparison-box.ollama {
+            border-color: #667eea;
+            border-left: 4px solid #667eea;
+        }
+
+        .comparison-box.openai {
+            border-color: #10a37f;
+            border-left: 4px solid #10a37f;
+        }
+
+        .judge-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f0f4ff;
+            border-radius: 8px;
+            border-left: 4px solid #764ba2;
+        }
+
+        .judge-section h3 {
+            color: #764ba2;
+            margin-bottom: 15px;
+        }
+
+        .judge-scores {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .judge-score {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .judge-score-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .judge-score-value {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #764ba2;
+        }
+
+        .judge-winner {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #10a37f;
+        }
+
+        @media (max-width: 768px) {
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🦙 Local Llama Demo</h1>
+            <p class="subtitle">Як використовувати локальну LLM модель через Ollama</p>
+        </header>
+
+        <!-- Hardware Info -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; padding: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);">
+            <h3 style="margin-bottom: 15px; font-size: 1.2em;">💻 Конфіг цього комп'ютера</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <p style="font-size: 0.95em; margin-bottom: 8px;"><strong>Чіп:</strong> Apple M1 Pro</p>
+                    <p style="font-size: 0.95em; margin-bottom: 8px;"><strong>RAM:</strong> 16 GB</p>
+                    <p style="font-size: 0.95em;"><strong>Рівень:</strong> ⭐ Оптимальний</p>
+                </div>
+                <div>
+                    <p style="font-size: 0.95em; margin-bottom: 8px;"><strong>Які моделі піде:</strong> 7B–8B параметрів</p>
+                    <p style="font-size: 0.95em; margin-bottom: 8px;"><strong>Приклади:</strong> Llama 3.1 8B, Mistral</p>
+                    <p style="font-size: 0.95em;"><strong>Швидкість:</strong> 15–30 токенів/сек ✅</p>
+                </div>
+            </div>
+            <div style="margin-top: 15px; padding: 12px; background: rgba(255, 255, 255, 0.15); border-radius: 8px; border-left: 3px solid #ffd700;">
+                <p style="font-size: 0.95em; margin: 0;"><strong>✨ Killler-фіча для Ollama:</strong> Unified Memory — відеокарта використовує ту саму оперативну пам'ять, що й система. Це робить Ollama дуже ефективним на Mac.</p>
+            </div>
+        </div>
+
+        <div class="demo-grid">
+            <!-- Setup Card -->
+            <div class="card">
+                <h2>⚙️ Налаштування</h2>
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('setup', 'install')">Встановлення</button>
+                    <button class="tab-btn" onclick="switchTab('setup', 'verify')">Перевірка</button>
+                </div>
+
+                <div id="setup-install" class="step-container active">
+                    <h3 style="color: #333; margin-bottom: 15px;">Крок 1: Встановити Ollama</h3>
+                    <div class="setup-list">1. Завантажити з <a href="https://ollama.ai" style="color: #667eea;">ollama.ai</a></div>
+                    <div class="setup-list">2. Встановити для вашої OS (macOS, Linux, Windows WSL)</div>
+
+                    <h3 style="color: #333; margin-bottom: 15px; margin-top: 20px;">Крок 2: Завантажити модель</h3>
+                    <div class="code-block">$ ollama pull llama2</div>
+                    <p style="font-size: 0.9em; color: #666; margin-top: 10px;">або Mistral:</p>
+                    <div class="code-block">$ ollama pull mistral</div>
+
+                    <h3 style="color: #333; margin-bottom: 15px; margin-top: 20px;">Крок 3: Запустити сервер</h3>
+                    <div class="code-block">$ ollama serve</div>
+                    <p style="font-size: 0.9em; color: #28a745; margin-top: 10px;">✓ Сервер запущений на <strong>localhost:11434</strong></p>
+                </div>
+
+                <div id="setup-verify" class="step-container">
+                    <h3 style="color: #333; margin-bottom: 15px;">Перевірити підключення</h3>
+                    <div class="interactive-section">
+                        <button onclick="testConnection()" style="width: 100%; margin-bottom: 10px;">
+                            🔗 Перевірити Ollama
+                        </button>
+                        <div id="connection-status" class="status"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Demo Card -->
+            <div class="card">
+                <h2>💬 Demo API Запит</h2>
+                <div class="interactive-section">
+                    <div class="input-group">
+                        <label>Модель:</label>
+                        <select id="model-select">
+                            <option value="llama2">Llama2</option>
+                            <option value="mistral">Mistral</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Ваш запит:</label>
+                        <textarea id="prompt-input" placeholder="Запитайте щось у моделі...">Скажи коротко: що таке machine learning?</textarea>
+                    </div>
+
+                    <button onclick="sendRequest()" style="width: 100%;">
+                        🚀 Відправити запит
+                    </button>
+
+                    <div id="request-status" class="status"></div>
+
+                    <div id="response-output" class="output-section">
+                        <div class="output-label">📝 Відповідь моделі:</div>
+                        <div id="response-text" class="output-text"></div>
+                        <div class="stats" id="response-stats"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison Card -->
+        <div class="card">
+            <h2>⚖️ Ollama vs OpenAI (LLM-as-Judge)</h2>
+            <div class="interactive-section">
+                <div class="input-group">
+                    <label>OpenAI API Key:</label>
+                    <input type="password" id="openai-key" placeholder="sk-..." />
+                </div>
+
+                <div class="input-group">
+                    <label>Ollama модель:</label>
+                    <select id="ollama-model-select">
+                        <option value="llama2">Llama2</option>
+                        <option value="mistral">Mistral</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Запит для порівняння:</label>
+                    <textarea id="compare-prompt" placeholder="Напиши запит...">Ви розробляєте production систему e-commerce з 50M товарів та 10M користувачів. Кожен день додається 100K нових товарів. System має обробляти 1M запитів/день з latency < 50ms, поточна точність recall@10 = 25%, цільова = 45%.
+
+ЗАДАЧА: Спроектуйте рішення для підвищення точності до 45% в найкоротший час (< 2 тижні).
+
+ВАРІАНТИ:
+A) Fine-tune BERT на (user, item) pairs: потребує збору 500K пар за 1 тиждень, GPU training 3 дні, потім deployment на 20 GPU серверів, вартість $50K
+B) Multi-stage RAG: dense retrieval (Llama embeddings) → BM25 на метаданих → LLM ranking, deployment за 3 дні, обслуговування $2K/mo
+C) Hybrid: quick LoRA fine-tune на 50K пар (1 день) + RAG для long-tail, hybrid deployment за 5 днів
+
+ПИТАННЯ:
+1. Який варіант виберете і чому?
+2. Яких ризиків очікувати на кожному варіанті? (catastrophic forgetting, hallucinations, latency blowup)
+3. Як вимірювати прогрес тижнево?
+4. Якщо через 2 тижні recall буде тільки 35%, який plan B?</textarea>
+                </div>
+
+                <div style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; font-size: 0.9em; color: #555;">
+                    <details>
+                        <summary style="cursor: pointer; font-weight: bold; color: #667eea;">📋 LLM-as-Judge промпт (натисни щоб побачити)</summary>
+                        <pre style="margin-top: 10px; background: white; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 0.85em;">Ти експерт-оцінювач. Оцініть цю відповідь на складне технічне питання.
+МОВА: Відповідь ПОВИННА бути українською мовою.
+
+ЗАПИТ: [питання від користувача]
+
+ВІДПОВІДЬ: [модель відповідає]
+
+Оцініть по метриках (кожна 0-10):
+1. **Технічна глибина** - розуміння складних архітектурних решень
+2. **Специфічність** - конкретні приклади (моделі, інструменти, числа)
+3. **Практичність** - чи можна реально використати рекомендацію
+4. **Повнота** - охоплює усі аспекти питання (latency, cost, scalability)
+
+ШТРАФ: Якщо відповідь англійською або змішаною мовою (замість чистої української) — знизьте ВСІ метрики на 3-4 бали.
+
+Формат: метрика1;метрика2;метрика3;метрика4;короткий коментар</pre>
+                    </details>
+                </div>
+
+                <button onclick="compareModels()" style="width: 100%; margin-bottom: 10px;">
+                    ⚖️ Порівняти моделі
+                </button>
+
+                <div id="compare-status" class="status"></div>
+
+                <div id="compare-output" class="output-section" style="display: none;">
+                    <div class="comparison-grid">
+                        <div class="comparison-box ollama">
+                            <h3>🦙 Ollama відповідь</h3>
+                            <div id="ollama-response" class="output-text"></div>
+                        </div>
+                        <div class="comparison-box openai">
+                            <h3>🤖 OpenAI відповідь</h3>
+                            <div id="openai-response" class="output-text"></div>
+                        </div>
+                    </div>
+
+                    <div class="judge-section">
+                        <h3>🏆 LLM-as-Judge оцінка</h3>
+                        <div class="judge-scores" id="judge-scores"></div>
+                        <div class="judge-winner" id="judge-winner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Code Examples Card -->
+        <div class="card">
+            <h2>📚 Приклади коду</h2>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('code', 'curl')">cURL</button>
+                <button class="tab-btn" onclick="switchTab('code', 'python')">Python</button>
+                <button class="tab-btn" onclick="switchTab('code', 'js')">JavaScript</button>
+            </div>
+
+            <div id="code-curl" class="step-container active">
+                <div class="code-block">curl http://localhost:11434/api/generate \<br>
+  <span class="string">-d</span> <span class="string">'{"model":"llama2","prompt":"Hello","stream":false}'</span></div>
+                <p style="margin-top: 15px; color: #666;">Відповідь буде JSON з полем <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">response</code></p>
+            </div>
+
+            <div id="code-python" class="step-container">
+                <div class="code-block"><span class="keyword">import</span> requests
+<span class="keyword">import</span> json
+
+response = requests.<span class="function">post</span>(
+    <span class="string">"http://localhost:11434/api/generate"</span>,
+    json={
+        <span class="string">"model"</span>: <span class="string">"llama2"</span>,
+        <span class="string">"prompt"</span>: <span class="string">"Hello"</span>,
+        <span class="string">"stream"</span>: <span class="keyword">False</span>
+    }
+)
+result = response.<span class="function">json</span>()
+<span class="keyword">print</span>(result[<span class="string">"response"</span>])</div>
+            </div>
+
+            <div id="code-js" class="step-container">
+                <div class="code-block"><span class="keyword">const</span> response = <span class="keyword">await</span> <span class="function">fetch</span>(
+    <span class="string">"http://localhost:11434/api/generate"</span>,
+    {
+        method: <span class="string">"POST"</span>,
+        body: <span class="function">JSON</span>.<span class="function">stringify</span>({
+            model: <span class="string">"llama2"</span>,
+            prompt: <span class="string">"Hello"</span>,
+            stream: <span class="keyword">false</span>
+        })
+    }
+);
+<span class="keyword">const</span> data = <span class="keyword">await</span> response.<span class="function">json</span>();
+<span class="function">console</span>.<span class="function">log</span>(data.response);</div>
+            </div>
+        </div>
+
+        <!-- Vision & Image Generation Card -->
+        <div class="card">
+            <h2>🖼️ Vision & Image Generation</h2>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('vision', 'analyze')">LLaVA (Аналіз картинок)</button>
+                <button class="tab-btn" onclick="switchTab('vision', 'generate')">Генерація зображень</button>
+            </div>
+
+            <div id="vision-analyze" class="step-container active">
+                <h3 style="color: #333; margin-bottom: 15px;">Аналіз картинки через LLaVA</h3>
+                <div class="interactive-section">
+                    <div class="input-group">
+                        <label>Модель:</label>
+                        <select id="vision-model">
+                            <option value="llava">LLaVA (vision-language)</option>
+                            <option value="llava:7b">LLaVA 7B (швидше)</option>
+                            <option value="llava:13b">LLaVA 13B (краща якість)</option>
+                        </select>
+                        <p style="font-size: 0.85em; color: #666; margin-top: 5px;">💡 LLaVA комбінує текст та картинку — можна дати промпт з описом</p>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Картинка:</label>
+                        <input type="file" id="vision-image" accept="image/*" />
+                    </div>
+
+                    <div class="input-group">
+                        <label>Промпт:</label>
+                        <textarea id="vision-prompt" placeholder="Наприклад: Описати що на картинці. Яких об'єктів ти видиш?">Детально описати що на картинці</textarea>
+                    </div>
+
+                    <button onclick="analyzeImage()" style="width: 100%; margin-bottom: 10px;">
+                        🔍 Аналізувати картинку
+                    </button>
+
+                    <div id="vision-result" class="status"></div>
+                </div>
+            </div>
+
+            <div id="vision-generate" class="step-container">
+                <h3 style="color: #333; margin-bottom: 15px;">Генерувати зображення</h3>
+                <div class="interactive-section">
+                    <div class="input-group">
+                        <label>Модель:</label>
+                        <select id="generation-model">
+                            <option value="flux">Flux (найновіша, найкраща якість)</option>
+                            <option value="sdxl">Stable Diffusion XL</option>
+                            <option value="dall-e-3">DALL-E 3 (потребує OpenAI key)</option>
+                        </select>
+                        <p style="font-size: 0.85em; color: #666; margin-top: 5px;">💡 Flux та SDXL запускаються локально. DALL-E потребує OpenAI API key</p>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Промпт для генерації:</label>
+                        <textarea id="generation-prompt" placeholder="Наприклад: A beautiful sunset over mountains, oil painting style">A serene landscape with mountains and lake at sunset, cinematic lighting</textarea>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Кількість кроків (для Flux/SDXL):</label>
+                        <input type="number" id="generation-steps" value="20" min="10" max="50" />
+                        <p style="font-size: 0.85em; color: #666; margin-top: 5px;">Більше кроків = краща якість, але довше генерується</p>
+                    </div>
+
+                    <button onclick="generateImage()" style="width: 100%; margin-bottom: 10px;">
+                        🎨 Генерувати зображення
+                    </button>
+
+                    <div id="generation-result" class="status"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Important Notes Card -->
+        <div class="card">
+            <h2>⚠️ Важні моменти</h2>
+            <div style="display: grid; gap: 15px;">
+                <div style="padding: 15px; background: #fff3cd; border-radius: 6px; border-left: 4px solid #ffc107;">
+                    <strong style="color: #856404;">Ollama мусить бути запущений</strong>
+                    <p style="color: #856404; margin-top: 5px; font-size: 0.9em;">Перш ніж робити запити, запустіть <code style="background: rgba(0,0,0,0.1); padding: 2px 6px;">ollama serve</code> в окремому терміналі</p>
+                </div>
+
+                <div style="padding: 15px; background: #d4edda; border-radius: 6px; border-left: 4px solid #28a745;">
+                    <strong style="color: #155724;">Вибір моделі залежить від розміру</strong>
+                    <p style="color: #155724; margin-top: 5px; font-size: 0.9em;">Llama2 7B (~4GB) — швидка, базова якість. Mistral 7B (~4GB) — кращої якості. Llama2 13B (~8GB) — ще краще, але повільніше</p>
+                </div>
+
+                <div style="padding: 15px; background: #d1ecf1; border-radius: 6px; border-left: 4px solid #17a2b8;">
+                    <strong style="color: #0c5460;">Latency локальної моделі</strong>
+                    <p style="color: #0c5460; margin-top: 5px; font-size: 0.9em;">Очікуйте 2-10 секунд на середньому залежно від довжини промпту та потужності машини</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Apple Silicon vs Traditional PC -->
+        <div class="card">
+            <h2>🍎 Чому Apple Silicon "виняток з правил" для LLM?</h2>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+                <!-- Traditional PC -->
+                <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 10px;">
+                    <h3 style="margin-bottom: 15px;">🖥️ Традиційний ПК (Discrete GPU)</h3>
+                    <p style="font-size: 0.9em; margin-bottom: 12px;">CPU має свою RAM (32GB), GPU має свою VRAM (8GB)</p>
+                    <p style="font-size: 0.9em; margin-bottom: 12px;"><strong>❌ Проблема:</strong> Якщо модель 10GB, а VRAM 8GB — не влізе</p>
+                    <p style="font-size: 0.9em; margin-bottom: 12px;"><strong>⚠️ Bottleneck:</strong> Дані постійно пересилаються через PCIe → повільно</p>
+                    <p style="font-size: 0.9em;">
+                        <strong>RTX 4060 (8GB) + 32GB RAM:</strong><br>
+                        Llama 70B = <span style="color: #ffeb3b; font-weight: bold;">1 токен/сек</span> (на CPU)
+                    </p>
+                </div>
+
+                <!-- Apple Silicon -->
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px;">
+                    <h3 style="margin-bottom: 15px;">🍎 Apple Silicon (Unified Memory)</h3>
+                    <p style="font-size: 0.9em; margin-bottom: 12px;">CPU, GPU, Neural Engine — на одному кристалі, спільна пам'ять</p>
+                    <p style="font-size: 0.9em; margin-bottom: 12px;"><strong>✅ Рішення:</strong> Якщо 32GB RAM → GPU може використати майже все</p>
+                    <p style="font-size: 0.9em; margin-bottom: 12px;"><strong>⚡ Преимущество:</strong> Немає копіювання, прямий доступ до пам'яті</p>
+                    <p style="font-size: 0.9em;">
+                        <strong>MacBook M2 Pro (32GB):</strong><br>
+                        Llama 70B = <span style="color: #4ade80; font-weight: bold;">5-8 токенів/сек</span> ✨
+                    </p>
+                </div>
+            </div>
+
+            <h3 style="color: #1e3c72; margin-bottom: 15px;">🔧 Технічні деталі</h3>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea; margin-bottom: 20px;">
+                <p style="color: #555; margin-bottom: 10px;"><strong>Memory Bandwidth (швидкість доступу до пам'яті):</strong></p>
+                <ul style="color: #555; margin-left: 20px; font-size: 0.95em;">
+                    <li>RTX 4090: 960 GB/s</li>
+                    <li><strong>M2 Max: 400 GB/s</strong> (менше, але немає bottleneck на копіювання)</li>
+                    <li>M3 Max: 800 GB/s (приблизно як RTX 4090)</li>
+                </ul>
+                <p style="color: #666; margin-top: 10px; font-size: 0.9em; font-style: italic;">
+                    💡 На Apple Silicon ви економите час на копіюванні 10GB моделі туди-сюди, що на практиці дає більше користі, ніж просто raw bandwidth
+                </p>
+            </div>
+
+            <h3 style="color: #1e3c72; margin-bottom: 15px;">📊 Практичний приклад</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <thead>
+                    <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Модель</th>
+                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">RTX 4060 (8GB VRAM)</th>
+                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">MacBook M2 Pro (32GB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="background: #f8f9fa;">
+                        <td style="padding: 12px; border: 1px solid #ddd;"><strong>Llama 3.2 1B</strong></td>
+                        <td style="padding: 12px; border: 1px solid #ddd; color: #28a745;"><strong>30 токенів/сек</strong> ✓</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; color: #28a745;"><strong>50+ токенів/сек</strong> ✨</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; border: 1px solid #ddd;"><strong>Llama 3 8B</strong></td>
+                        <td style="padding: 12px; border: 1px solid #ddd; color: #28a745;"><strong>15 токенів/сек</strong> ✓</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; color: #28a745;"><strong>20-25 токенів/сек</strong> ✓</td>
+                    </tr>
+                    <tr style="background: #f8f9fa;">
+                        <td style="padding: 12px; border: 1px solid #ddd;"><strong>Llama 3 70B</strong></td>
+                        <td style="padding: 12px; border: 1px solid #ddd; color: #dc3545;"><strong>❌ Not possible</strong> (40GB RAM потребує)</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; color: #28a745;"><strong>5-8 токенів/сек</strong> 🎉</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; border: 1px solid #ddd;"><strong>Llama 3.1 405B</strong></td>
+                        <td style="padding: 12px; border: 1px solid #ddd; color: #dc3545;"><strong>❌ Impossible</strong></td>
+                        <td style="padding: 12px; border: 1px solid #ddd; color: #dc3545;">❌ Потребує 192GB+ (Mac Studio)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="color: #1e3c72; margin-bottom: 15px;">🎯 Ключові висновки</h3>
+            <div style="display: grid; gap: 12px;">
+                <div style="padding: 12px; background: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px; color: #2e7d32;">
+                    <strong>Unified Memory ≠ Shared Video Memory</strong><br>
+                    <span style="font-size: 0.9em;">Це не старі вбудовані карти Intel. Це професійна швидка архітектура на одному кристалі</span>
+                </div>
+                <div style="padding: 12px; background: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px; color: #1565c0;">
+                    <strong>Для AI-інженера сьогодні:</strong><br>
+                    <span style="font-size: 0.9em;">MacBook з 32GB+ RAM — наймобільніша та найпотужніша лабораторія для локальних LLM</span>
+                </div>
+                <div style="padding: 12px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 4px; color: #e65100;">
+                    <strong>Порада для розробників:</strong><br>
+                    <span style="font-size: 0.9em;">Навіть MacBook Air M1 з 8GB зможе запустити Llama 1B з прийнятною швидкістю. Спробуйте!</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(group, tab) {
+            // Hide all containers in group
+            document.querySelectorAll(`#${group}-${tab.charAt(0) !== '[' ? tab.split('-')[0] : ''} .step-container, [id^="${group}-"]`).forEach(el => {
+                if (el.id.startsWith(group + '-')) {
+                    el.classList.remove('active');
+                }
+            });
+
+            // Show selected tab
+            document.getElementById(`${group}-${tab}`).classList.add('active');
+
+            // Update buttons
+            document.querySelectorAll(`.tab-btn`).forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        async function testConnection() {
+            const status = document.getElementById('connection-status');
+            status.classList.add('visible', 'loading');
+            status.textContent = '⏳ Перевірка підключення...';
+
+            try {
+                const response = await fetch('/api/tags');
+                if (response.ok) {
+                    const data = await response.json();
+                    const models = data.models.map(m => m.name).join(', ');
+                    status.classList.remove('loading');
+                    status.classList.add('success');
+                    status.innerHTML = `✅ Ollama підключений!<br><strong>Доступні моделі:</strong> ${models || 'Жодної'}`;
+                } else {
+                    throw new Error('Server returned ' + response.status);
+                }
+            } catch (error) {
+                status.classList.remove('loading');
+                status.classList.add('error');
+                status.textContent = '❌ Не можу підключитися. Переконайтеся: ollama serve запущений, FastAPI сервер працює на :8000';
+            }
+        }
+
+        async function sendRequest() {
+            const prompt = document.getElementById('prompt-input').value;
+            const model = document.getElementById('model-select').value;
+            const status = document.getElementById('request-status');
+            const output = document.getElementById('response-output');
+
+            if (!prompt.trim()) {
+                status.classList.add('visible', 'error');
+                status.textContent = '❌ Напишіть запит';
+                return;
+            }
+
+            status.classList.add('visible', 'loading');
+            status.textContent = '⏳ Чекаю на відповідь...';
+            output.classList.remove('visible');
+
+            const startTime = Date.now();
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: model,
+                        prompt: prompt,
+                        stream: false
+                    })
+                });
+
+                if (!response.ok) throw new Error('API Error: ' + response.status);
+
+                const data = await response.json();
+                const endTime = Date.now();
+                const latency = (endTime - startTime) / 1000;
+
+                document.getElementById('response-text').textContent = data.response || 'Пуста відповідь';
+
+                const inputTokens = Math.ceil(prompt.length / 4);
+                const outputTokens = Math.ceil((data.response || '').length / 4);
+
+                document.getElementById('response-stats').innerHTML = `
+                    <div class="stat-box">
+                        <div class="stat-label">Час відповіді</div>
+                        <div class="stat-value">${latency.toFixed(2)}s</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Токени (input)</div>
+                        <div class="stat-value">${inputTokens}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Токени (output)</div>
+                        <div class="stat-value">${outputTokens}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Вихідна довжина</div>
+                        <div class="stat-value">${(data.response || '').length} знаків</div>
+                    </div>
+                `;
+
+                output.classList.add('visible');
+                status.classList.remove('loading');
+                status.classList.add('success');
+                status.textContent = '✅ Готово!';
+            } catch (error) {
+                status.classList.remove('loading');
+                status.classList.add('error');
+                status.textContent = '❌ Помилка: ' + error.message;
+            }
+        }
+
+        async function compareModels() {
+            const prompt = document.getElementById('compare-prompt').value;
+            const ollamaModel = document.getElementById('ollama-model-select').value;
+            const openaiKey = document.getElementById('openai-key').value;
+            const status = document.getElementById('compare-status');
+            const output = document.getElementById('compare-output');
+
+            if (!prompt.trim()) {
+                status.classList.add('visible', 'error');
+                status.textContent = '❌ Напишіть запит';
+                return;
+            }
+
+            if (!openaiKey.trim()) {
+                status.classList.add('visible', 'error');
+                status.textContent = '❌ Введіть OpenAI API Key';
+                return;
+            }
+
+            status.classList.add('visible', 'loading');
+            status.textContent = '⏳ Чекаю на відповіді від обох моделей та LLM-as-Judge...';
+            output.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/compare', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-OpenAI-Key': openaiKey
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        ollama_model: ollamaModel
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'API Error');
+                }
+
+                const data = await response.json();
+
+                document.getElementById('ollama-response').textContent = data.ollama;
+                document.getElementById('openai-response').textContent = data.openai;
+
+                // Показуємо детальні оцінки для кожної моделі
+                const ollamaScores = data.ollama_scores;
+                const openaiScores = data.openai_scores;
+
+                const scoresHTML = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div style="padding: 15px; background: #f5f5f5; border-radius: 8px; border-left: 4px solid #a0877b;">
+                            <h4 style="color: #8b7355; margin-bottom: 12px;">🦙 Ollama оцінка</h4>
+                            <div style="font-size: 0.9em; line-height: 1.8;">
+                                <div><strong>Технічна глибина:</strong> <span style="color: #d84315; font-size: 1.1em; font-weight: bold;">${ollamaScores.depth.toFixed(1)}</span>/10</div>
+                                <div><strong>Специфічність:</strong> <span style="color: #d84315; font-size: 1.1em; font-weight: bold;">${ollamaScores.specificity.toFixed(1)}</span>/10</div>
+                                <div><strong>Практичність:</strong> <span style="color: #d84315; font-size: 1.1em; font-weight: bold;">${ollamaScores.practicality.toFixed(1)}</span>/10</div>
+                                <div><strong>Повнота:</strong> <span style="color: #d84315; font-size: 1.1em; font-weight: bold;">${ollamaScores.completeness.toFixed(1)}</span>/10</div>
+                                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 0.85em; color: #666;">
+                                    <strong>Коментар:</strong> ${ollamaScores.comment}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="padding: 15px; background: #f0fdf9; border-radius: 8px; border-left: 4px solid #10a37f;">
+                            <h4 style="color: #0d8659; margin-bottom: 12px;">🤖 OpenAI оцінка</h4>
+                            <div style="font-size: 0.9em; line-height: 1.8;">
+                                <div><strong>Технічна глибина:</strong> <span style="color: #059669; font-size: 1.1em; font-weight: bold;">${openaiScores.depth.toFixed(1)}</span>/10</div>
+                                <div><strong>Специфічність:</strong> <span style="color: #059669; font-size: 1.1em; font-weight: bold;">${openaiScores.specificity.toFixed(1)}</span>/10</div>
+                                <div><strong>Практичність:</strong> <span style="color: #059669; font-size: 1.1em; font-weight: bold;">${openaiScores.practicality.toFixed(1)}</span>/10</div>
+                                <div><strong>Повнота:</strong> <span style="color: #059669; font-size: 1.1em; font-weight: bold;">${openaiScores.completeness.toFixed(1)}</span>/10</div>
+                                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 0.85em; color: #666;">
+                                    <strong>Коментар:</strong> ${openaiScores.comment}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; padding: 12px; background: #fff3cd; border-radius: 6px; border-left: 4px solid #ff9800;">
+                        <strong>📊 Висновок:</strong> OpenAI середнього показника = ${((openaiScores.depth + openaiScores.specificity + openaiScores.practicality + openaiScores.completeness) / 4).toFixed(1)}/10 vs Ollama = ${((ollamaScores.depth + ollamaScores.specificity + ollamaScores.practicality + ollamaScores.completeness) / 4).toFixed(1)}/10
+                    </div>
+                `;
+
+                document.getElementById('judge-scores').innerHTML = scoresHTML;
+
+                output.style.display = 'block';
+                status.classList.remove('loading');
+                status.classList.add('success');
+                status.textContent = '✅ Порівняння завершено!';
+            } catch (error) {
+                status.classList.remove('loading');
+                status.classList.add('error');
+                status.textContent = '❌ Помилка: ' + error.message;
+            }
+        }
+
+        async function analyzeImage() {
+            const imageInput = document.getElementById('vision-image');
+            const prompt = document.getElementById('vision-prompt').value;
+            const model = document.getElementById('vision-model').value;
+            const status = document.getElementById('vision-result');
+
+            if (!imageInput.files.length) {
+                status.classList.add('visible', 'error');
+                status.textContent = '❌ Виберіть картинку';
+                return;
+            }
+
+            if (!prompt.trim()) {
+                status.classList.add('visible', 'error');
+                status.textContent = '❌ Напишіть промпт';
+                return;
+            }
+
+            // Перевірити чи запущена Ollama
+            try {
+                const tagsResponse = await fetch('/api/tags');
+                if (!tagsResponse.ok) {
+                    throw new Error('Ollama не доступна');
+                }
+                const tags = await tagsResponse.json();
+                if (!tags.models || tags.models.length === 0) {
+                    status.classList.add('visible', 'error');
+                    status.innerHTML = `
+                        <div style="background: #ffebee; padding: 15px; border-radius: 8px; border-left: 4px solid #c62828;">
+                            <h4 style="color: #b71c1c; margin-bottom: 10px;">❌ Ollama не має завантажених моделей</h4>
+                            <p style="color: #555; margin: 10px 0; font-size: 0.9em;">
+                                Запустіть в терміналі:<br>
+                                <code style="background: #f5f5f5; padding: 8px; border-radius: 4px; display: inline-block; margin-top: 5px;">ollama pull llava</code>
+                            </p>
+                        </div>
+                    `;
+                    return;
+                }
+                const hasModel = tags.models.some(m => m.name.includes('llava'));
+                if (!hasModel) {
+                    status.classList.add('visible', 'error');
+                    status.innerHTML = `
+                        <div style="background: #fff3e0; padding: 15px; border-radius: 8px; border-left: 4px solid #e65100;">
+                            <h4 style="color: #bf360c; margin-bottom: 10px;">⚠️ LLaVA модель не встановлена</h4>
+                            <p style="color: #555; margin: 10px 0; font-size: 0.9em;">
+                                Встановлені моделі: ${tags.models.map(m => m.name).join(', ')}<br><br>
+                                Запустіть в терміналі:<br>
+                                <code style="background: #f5f5f5; padding: 8px; border-radius: 4px; display: inline-block; margin-top: 5px;">ollama pull llava</code>
+                            </p>
+                        </div>
+                    `;
+                    return;
+                }
+            } catch (error) {
+                status.classList.add('visible', 'error');
+                status.innerHTML = `
+                    <div style="background: #ffebee; padding: 15px; border-radius: 8px; border-left: 4px solid #c62828;">
+                        <h4 style="color: #b71c1c; margin-bottom: 10px;">❌ Ollama не запущена</h4>
+                        <p style="color: #555; margin: 10px 0; font-size: 0.9em;">
+                            Запустіть Ollama в окремому терміналі:<br>
+                            <code style="background: #f5f5f5; padding: 8px; border-radius: 4px; display: inline-block; margin-top: 5px;">ollama serve</code><br><br>
+                            Потім завантажте LLaVA:<br>
+                            <code style="background: #f5f5f5; padding: 8px; border-radius: 4px; display: inline-block; margin-top: 5px;">ollama pull llava</code>
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            status.classList.remove('error', 'success');
+            status.classList.add('loading', 'visible');
+            status.textContent = '🔄 Аналізування картинки...';
+
+            try {
+                const file = imageInput.files[0];
+                const reader = new FileReader();
+
+                reader.onload = async (e) => {
+                    const base64 = e.target.result.split(',')[1];
+
+                    const response = await fetch('/api/vision', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            model: model,
+                            prompt: prompt,
+                            image_base64: base64
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(await response.text());
+                    }
+
+                    const data = await response.json();
+                    status.classList.remove('loading');
+                    status.classList.add('success');
+                    status.innerHTML = `
+                        <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; border-left: 4px solid #4caf50;">
+                            <h4 style="color: #2e7d32; margin-bottom: 10px;">📝 Аналіз картинки</h4>
+                            <div style="background: white; padding: 12px; border-radius: 6px; color: #333; font-size: 0.95em; line-height: 1.6;">
+                                ${(data.response || 'Немає відповіді').replace(/\n/g, '<br>')}
+                            </div>
+                        </div>
+                    `;
+                };
+
+                reader.readAsDataURL(file);
+            } catch (error) {
+                status.classList.remove('loading');
+                status.classList.add('error');
+                status.textContent = '❌ Помилка: ' + error.message;
+            }
+        }
+
+        async function generateImage() {
+            const prompt = document.getElementById('generation-prompt').value;
+            const model = document.getElementById('generation-model').value;
+            const steps = parseInt(document.getElementById('generation-steps').value);
+            const status = document.getElementById('generation-result');
+
+            if (!prompt.trim()) {
+                status.classList.add('visible', 'error');
+                status.textContent = '❌ Напишіть промпт для генерації';
+                return;
+            }
+
+            // Перевірити чи запущена Ollama для локальних моделей
+            if (model !== 'dall-e-3') {
+                try {
+                    const tagsResponse = await fetch('/api/tags');
+                    if (!tagsResponse.ok) {
+                        throw new Error('Ollama не доступна');
+                    }
+                    const tags = await tagsResponse.json();
+                    if (!tags.models || tags.models.length === 0) {
+                        status.classList.add('visible', 'error');
+                        status.innerHTML = `
+                            <div style="background: #ffebee; padding: 15px; border-radius: 8px; border-left: 4px solid #c62828;">
+                                <h4 style="color: #b71c1c; margin-bottom: 10px;">❌ Ollama не запущена</h4>
+                                <p style="color: #555; margin: 10px 0; font-size: 0.9em;">
+                                    Запустіть Ollama в окремому терміналі:<br>
+                                    <code style="background: #f5f5f5; padding: 8px; border-radius: 4px; display: inline-block; margin-top: 5px;">ollama serve</code>
+                                </p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    const hasModel = tags.models.some(m => m.name.includes(model === 'sdxl' ? 'sdxl' : 'flux'));
+                    if (!hasModel) {
+                        status.classList.add('visible', 'error');
+                        status.innerHTML = `
+                            <div style="background: #fff3e0; padding: 15px; border-radius: 8px; border-left: 4px solid #e65100;">
+                                <h4 style="color: #bf360c; margin-bottom: 10px;">⚠️ Модель ${model} не встановлена</h4>
+                                <p style="color: #555; margin: 10px 0; font-size: 0.9em;">
+                                    Встановлені моделі: ${tags.models.map(m => m.name).join(', ')}<br><br>
+                                    Запустіть в терміналі:<br>
+                                    <code style="background: #f5f5f5; padding: 8px; border-radius: 4px; display: inline-block; margin-top: 5px;">ollama pull ${model === 'sdxl' ? 'sdxl' : 'flux'}</code>
+                                </p>
+                            </div>
+                        `;
+                        return;
+                    }
+                } catch (error) {
+                    status.classList.add('visible', 'error');
+                    status.innerHTML = `
+                        <div style="background: #ffebee; padding: 15px; border-radius: 8px; border-left: 4px solid #c62828;">
+                            <h4 style="color: #b71c1c; margin-bottom: 10px;">❌ Ollama не доступна</h4>
+                            <p style="color: #555; margin: 10px 0; font-size: 0.9em;">
+                                Запустіть Ollama в окремому терміналі:<br>
+                                <code style="background: #f5f5f5; padding: 8px; border-radius: 4px; display: inline-block; margin-top: 5px;">ollama serve</code><br><br>
+                                Потім завантажте модель:<br>
+                                <code style="background: #f5f5f5; padding: 8px; border-radius: 4px; display: inline-block; margin-top: 5px;">ollama pull ${model === 'sdxl' ? 'sdxl' : 'flux'}</code>
+                            </p>
+                        </div>
+                    `;
+                    return;
+                }
+            }
+
+            status.classList.remove('error', 'success');
+            status.classList.add('loading', 'visible');
+            status.textContent = '🎨 Генерування зображення... (це може зайняти 1-3 хвилини)';
+
+            try {
+                let response;
+
+                if (model === 'dall-e-3') {
+                    // DALL-E через OpenAI
+                    const openaiKey = document.getElementById('openai-key').value;
+                    if (!openaiKey) {
+                        throw new Error('Введіть OpenAI API Key для DALL-E');
+                    }
+
+                    response = await fetch('/api/openai/image', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-OpenAI-Key': openaiKey
+                        },
+                        body: JSON.stringify({
+                            prompt: prompt,
+                            model: 'dall-e-3'
+                        })
+                    });
+                } else {
+                    // Flux або SDXL через Ollama
+                    response = await fetch('/api/generate-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            prompt: prompt,
+                            model: model,
+                            steps: steps
+                        })
+                    });
+                }
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+
+                const data = await response.json();
+                status.classList.remove('loading');
+                status.classList.add('success');
+
+                let imageHTML = '';
+                if (data.image_url) {
+                    // DALL-E повертає URL
+                    imageHTML = `<img src="${data.image_url}" style="max-width: 100%; border-radius: 8px; margin: 15px 0;">`;
+                } else if (data.images && data.images.length > 0) {
+                    // Ollama повертає base64
+                    imageHTML = `<img src="data:image/png;base64,${data.images[0]}" style="max-width: 100%; border-radius: 8px; margin: 15px 0;">`;
+                }
+
+                status.innerHTML = `
+                    <div style="background: #f3e5f5; padding: 15px; border-radius: 8px; border-left: 4px solid #9c27b0;">
+                        <h4 style="color: #6a1b9a; margin-bottom: 10px;">✨ Згенероване зображення</h4>
+                        ${imageHTML}
+                        <p style="color: #333; margin-top: 10px; font-size: 0.9em;"><strong>Промпт:</strong> ${prompt}</p>
+                    </div>
+                `;
+            } catch (error) {
+                status.classList.remove('loading');
+                status.classList.add('error');
+                status.textContent = '❌ Помилка: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

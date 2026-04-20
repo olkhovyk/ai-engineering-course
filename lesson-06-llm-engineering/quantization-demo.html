@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Quantization — Interactive Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d0d1a;
+    color: #e0e0f0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  header {
+    text-align: center;
+    padding: 48px 24px 24px;
+  }
+
+  header h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #f59e0b, #ef4444, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  header p { color: #64748b; margin-top: 8px; font-size: 1rem; }
+
+  /* ── CONCEPT EXPLAINER ── */
+  .concept {
+    max-width: 900px;
+    margin: 32px auto;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  .concept-card {
+    background: rgba(255,255,255,0.04);
+    border-radius: 14px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.08);
+    text-align: center;
+  }
+
+  .concept-card .icon { font-size: 2rem; margin-bottom: 10px; }
+  .concept-card h3 { font-size: 0.95rem; font-weight: 600; color: #e2e8f0; margin-bottom: 6px; }
+  .concept-card p { font-size: 0.8rem; color: #64748b; line-height: 1.5; }
+
+  /* ── WEIGHT GRID DEMO ── */
+  .section {
+    max-width: 960px;
+    margin: 0 auto 48px;
+    padding: 0 24px;
+  }
+
+  .section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .step-badge {
+    background: rgba(139,92,246,0.2);
+    color: #a78bfa;
+    border: 1px solid rgba(139,92,246,0.4);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  /* WEIGHT GRID */
+  .weight-demo {
+    background: rgba(255,255,255,0.03);
+    border-radius: 16px;
+    padding: 28px;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .weight-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .btn-fp32 { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.5); color: #93c5fd; }
+  .btn-fp16 { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.5); color: #6ee7b7; }
+  .btn-int8 { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.5); color: #fcd34d; }
+  .btn-int4 { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.5); color: #fca5a5; }
+
+  .btn:hover { transform: translateY(-1px); filter: brightness(1.2); }
+  .btn.active { filter: brightness(1.3); box-shadow: 0 0 12px rgba(255,255,255,0.15); }
+
+  .weight-display {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .weight-visual {
+    flex: 1;
+    min-width: 280px;
+  }
+
+  .weight-label {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+
+  .bits-row {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  .bit {
+    width: 22px;
+    height: 28px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: monospace;
+    transition: all 0.4s ease;
+  }
+
+  .bit-active { background: rgba(99,102,241,0.8); color: white; }
+  .bit-zero   { background: rgba(255,255,255,0.07); color: #475569; }
+  .bit-gray   { background: rgba(255,255,255,0.03); color: #334155; opacity: 0.3; }
+
+  .weight-info {
+    flex: 1;
+    min-width: 220px;
+  }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 0.88rem;
+  }
+
+  .info-label { color: #64748b; }
+  .info-value { font-weight: 600; font-family: monospace; }
+
+  /* ── MEMORY VISUALIZER ── */
+  .memory-demo {
+    background: rgba(255,255,255,0.03);
+    border-radius: 16px;
+    padding: 28px;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .model-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .model-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.05);
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+
+  .model-btn.active {
+    background: rgba(139,92,246,0.2);
+    border-color: rgba(139,92,246,0.5);
+    color: #c4b5fd;
+  }
+
+  .memory-bars { display: flex; flex-direction: column; gap: 14px; }
+
+  .mem-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 80px;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .mem-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .mem-track {
+    height: 28px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .mem-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+  }
+
+  .fill-fp32 { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+  .fill-fp16 { background: linear-gradient(90deg, #10b981, #34d399); }
+  .fill-int8 { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+  .fill-int4 { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+  .mem-gb {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #94a3b8;
+    font-family: monospace;
+  }
+
+  /* ── PRECISION COMPARISON ── */
+  .precision-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .prec-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 14px;
+    padding: 20px 16px;
+    border: 1px solid rgba(255,255,255,0.07);
+    transition: transform 0.2s;
+  }
+
+  .prec-card:hover { transform: translateY(-3px); }
+
+  .prec-header {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .prec-type {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-bottom: 16px;
+  }
+
+  .prec-stat { margin-bottom: 10px; }
+  .prec-stat-label { font-size: 0.72rem; color: #64748b; margin-bottom: 4px; }
+  .prec-stat-bar { height: 6px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; }
+  .prec-stat-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+
+  .prec-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    font-family: monospace;
+    margin-bottom: 2px;
+  }
+
+  .prec-range { font-size: 0.72rem; color: #475569; }
+
+  /* ── ANIMATED NUMBER EXAMPLE ── */
+  .number-demo {
+    background: rgba(255,255,255,0.03);
+    border-radius: 16px;
+    padding: 28px;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .number-input-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .num-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .num-input-wrap label { font-size: 0.85rem; color: #64748b; }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 200px;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #8b5cf6;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .num-display {
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-family: monospace;
+    color: #a78bfa;
+    min-width: 80px;
+  }
+
+  .precision-rows { display: flex; flex-direction: column; gap: 12px; }
+
+  .prec-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 140px;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .prec-row-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  .label-fp32 { background: rgba(59,130,246,0.2); color: #93c5fd; }
+  .label-fp16 { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+  .label-int8 { background: rgba(245,158,11,0.2); color: #fcd34d; }
+  .label-int4 { background: rgba(239,68,68,0.2); color: #fca5a5; }
+
+  .prec-bits-mini { display: flex; gap: 2px; flex-wrap: wrap; }
+
+  .bit-mini {
+    width: 14px;
+    height: 18px;
+    border-radius: 2px;
+    font-size: 0.55rem;
+    font-family: monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    transition: all 0.3s;
+  }
+
+  .prec-num {
+    font-family: monospace;
+    font-size: 0.9rem;
+    text-align: right;
+  }
+
+  .error-indicator {
+    font-size: 0.75rem;
+    color: #ef4444;
+    margin-left: 8px;
+  }
+
+  .error-ok { color: #10b981; }
+
+  /* ── QUALITY TABLE ── */
+  .quality-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  .quality-table th {
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.04);
+    color: #64748b;
+    font-weight: 600;
+    text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .quality-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    vertical-align: middle;
+  }
+
+  .quality-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-green { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+  .badge-yellow { background: rgba(245,158,11,0.2); color: #fcd34d; }
+  .badge-orange { background: rgba(249,115,22,0.2); color: #fdba74; }
+  .badge-red { background: rgba(239,68,68,0.2); color: #fca5a5; }
+
+  .stars { color: #f59e0b; letter-spacing: 2px; }
+
+  /* ── TOOLTIP ── */
+  .tip {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    text-align: center;
+    line-height: 16px;
+    font-size: 0.7rem;
+    cursor: help;
+    color: #94a3b8;
+    position: relative;
+  }
+
+  footer {
+    text-align: center;
+    padding: 40px 24px;
+    color: #334155;
+    font-size: 0.82rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>LLM Quantization</h1>
+  <p>Інтерактивна демонстрація — як зменшити модель без втрати якості</p>
+</header>
+
+<!-- CONCEPT CARDS -->
+<div class="concept">
+  <div class="concept-card">
+    <div class="icon">🔢</div>
+    <h3>Що таке квантизація?</h3>
+    <p>Конвертація вагів моделі з 32-бітних чисел у менш точні формати (8-біт, 4-біт). Менше бітів = менше пам'яті.</p>
+  </div>
+  <div class="concept-card">
+    <div class="icon">💾</div>
+    <h3>Навіщо?</h3>
+    <p>Модель Llama 70B у FP32 займає ~280 GB. У INT4 — лише ~35 GB. Можна запустити на одній GPU A100.</p>
+  </div>
+  <div class="concept-card">
+    <div class="icon">⚖️</div>
+    <h3>Trade-off</h3>
+    <p>Менше бітів → менше RAM → швидше → дешевше. Але зростає помилка апроксимації (perplexity ↑).</p>
+  </div>
+</div>
+
+<!-- STEP 1: BIT REPRESENTATION -->
+<div class="section">
+  <div class="section-title">
+    <span class="step-badge">КРОК 1</span>
+    Як число зберігається в пам'яті
+  </div>
+  <div class="weight-demo">
+    <div class="weight-controls">
+      <span style="font-size:0.85rem;color:#64748b;margin-right:4px">Обери формат:</span>
+      <button class="btn btn-fp32 active" onclick="showBits('fp32')">FP32</button>
+      <button class="btn btn-fp16" onclick="showBits('fp16')">FP16</button>
+      <button class="btn btn-int8" onclick="showBits('int8')">INT8</button>
+      <button class="btn btn-int4" onclick="showBits('int4')">INT4</button>
+    </div>
+    <div class="weight-display">
+      <div class="weight-visual">
+        <div class="weight-label" id="bits-label">FP32 — 32 біти на одну вагу</div>
+        <div class="bits-row" id="bits-row"></div>
+        <div style="font-size:0.75rem;color:#475569;margin-top:8px" id="bits-desc">
+          1 знак · 8 біт (експонента) · 23 біти (мантиса)
+        </div>
+      </div>
+      <div class="weight-info">
+        <div class="info-row">
+          <span class="info-label">Бітів на вагу</span>
+          <span class="info-value" id="info-bits">32</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Байт на вагу</span>
+          <span class="info-value" id="info-bytes">4.0</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Унікальних значень</span>
+          <span class="info-value" id="info-vals">~4.3 млрд</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Розмір 7B моделі</span>
+          <span class="info-value" id="info-model">28 GB</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Стиснення vs FP32</span>
+          <span class="info-value" id="info-compress">1×</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 2: MEMORY VISUALIZER -->
+<div class="section">
+  <div class="section-title">
+    <span class="step-badge">КРОК 2</span>
+    Скільки RAM потрібно для різних моделей
+  </div>
+  <div class="memory-demo">
+    <div class="model-selector">
+      <button class="model-btn active" onclick="selectModel(this,'7b')">Llama 7B</button>
+      <button class="model-btn" onclick="selectModel(this,'13b')">Llama 13B</button>
+      <button class="model-btn" onclick="selectModel(this,'34b')">Llama 34B</button>
+      <button class="model-btn" onclick="selectModel(this,'70b')">Llama 70B</button>
+    </div>
+    <div class="memory-bars" id="memory-bars"></div>
+    <div style="margin-top:20px;padding:14px;background:rgba(139,92,246,0.08);border-radius:10px;border:1px solid rgba(139,92,246,0.2)">
+      <div style="font-size:0.8rem;color:#a78bfa;font-weight:600;margin-bottom:6px">💡 GPU пам'ять для запуску:</div>
+      <div style="font-size:0.78rem;color:#64748b;line-height:1.7">
+        RTX 4090 = 24 GB &nbsp;·&nbsp; A100 = 80 GB &nbsp;·&nbsp; H100 = 80 GB &nbsp;·&nbsp; MacBook M3 Pro = 18–36 GB (unified memory)
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 3: LIVE NUMBER QUANTIZATION -->
+<div class="section">
+  <div class="section-title">
+    <span class="step-badge">КРОК 3</span>
+    Як квантизація змінює числа — live
+  </div>
+  <div class="number-demo">
+    <div class="number-input-row">
+      <div class="num-input-wrap">
+        <label>Вага моделі:</label>
+        <input type="range" id="weight-slider" min="-10" max="10" step="0.01" value="3.14159">
+        <span class="num-display" id="weight-display">3.14159</span>
+      </div>
+    </div>
+    <div class="precision-rows" id="precision-rows"></div>
+  </div>
+</div>
+
+<!-- STEP 4: QUALITY COMPARISON -->
+<div class="section">
+  <div class="section-title">
+    <span class="step-badge">КРОК 4</span>
+    Якість vs розмір — реальні цифри
+  </div>
+  <table class="quality-table">
+    <thead>
+      <tr>
+        <th>Формат</th>
+        <th>Бітів</th>
+        <th>7B модель</th>
+        <th>Perplexity ↑</th>
+        <th>Якість</th>
+        <th>Швидкість</th>
+        <th>Де використовують</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-green">FP32</span></td>
+        <td>32</td>
+        <td>28 GB</td>
+        <td>Baseline</td>
+        <td><span class="stars">★★★★★</span></td>
+        <td><span class="badge badge-red">Найповільніший</span></td>
+        <td>Training, research</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-green">BF16 / FP16</span></td>
+        <td>16</td>
+        <td>14 GB</td>
+        <td>+0.01%</td>
+        <td><span class="stars">★★★★★</span></td>
+        <td><span class="badge badge-yellow">Середній</span></td>
+        <td>Production API (default)</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-yellow">GPTQ INT8</span></td>
+        <td>8</td>
+        <td>7 GB</td>
+        <td>+0.1%</td>
+        <td><span class="stars">★★★★☆</span></td>
+        <td><span class="badge badge-green">Швидкий</span></td>
+        <td>Self-hosted, A10G GPU</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-yellow">GGUF Q5_K_M</span></td>
+        <td>5</td>
+        <td>~5 GB</td>
+        <td>+0.5%</td>
+        <td><span class="stars">★★★★☆</span></td>
+        <td><span class="badge badge-green">Швидкий</span></td>
+        <td>Ollama, llama.cpp</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-orange">GGUF Q4_K_M</span></td>
+        <td>4</td>
+        <td>4 GB</td>
+        <td>+1.2%</td>
+        <td><span class="stars">★★★★☆</span></td>
+        <td><span class="badge badge-green">Дуже швидкий</span></td>
+        <td>Laptop, MacBook, edge</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-red">GGUF Q2_K</span></td>
+        <td>2</td>
+        <td>2.5 GB</td>
+        <td>+5%+</td>
+        <td><span class="stars">★★★☆☆</span></td>
+        <td><span class="badge badge-green">Найшвидший</span></td>
+        <td>Тільки для тестів</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- STEP 5: PRECISION CARDS -->
+<div class="section">
+  <div class="section-title">
+    <span class="step-badge">КРОК 5</span>
+    Точність представлення чисел
+  </div>
+  <div class="precision-grid" id="precision-grid"></div>
+</div>
+
+<footer>
+  AI Engineering Course · Lesson 6 — LLM Engineering (API + Self-hosted)
+</footer>
+
+<script>
+// ── DATA ──
+const BIT_CONFIGS = {
+  fp32: {
+    bits: 32, bytes: 4, label: 'FP32 — 32 біти на одну вагу',
+    desc: '1 знак · 8 біт (експонента) · 23 біти (мантиса)',
+    vals: '~4.3 млрд', modelSize: '28 GB', compress: '1×',
+    colors: ['#6366f1','#6366f1','#10b981','#10b981','#10b981','#10b981','#10b981','#10b981',
+             '#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b',
+             '#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b',
+             '#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b']
+  },
+  fp16: {
+    bits: 16, bytes: 2, label: 'FP16 — 16 бітів на одну вагу',
+    desc: '1 знак · 5 біт (експонента) · 10 біт (мантиса)',
+    vals: '~65K', modelSize: '14 GB', compress: '2×',
+    colors: ['#6366f1','#10b981','#10b981','#10b981','#10b981','#10b981',
+             '#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b']
+  },
+  int8: {
+    bits: 8, bytes: 1, label: 'INT8 — 8 бітів на одну вагу',
+    desc: '1 знак · 7 біт (значення від -128 до 127)',
+    vals: '256', modelSize: '7 GB', compress: '4×',
+    colors: ['#6366f1','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b','#f59e0b']
+  },
+  int4: {
+    bits: 4, bytes: 0.5, label: 'INT4 — 4 біти на одну вагу',
+    desc: '1 знак · 3 біти (значення від -8 до 7)',
+    vals: '16', modelSize: '3.5 GB', compress: '8×',
+    colors: ['#6366f1','#f59e0b','#f59e0b','#f59e0b']
+  }
+};
+
+const MODEL_PARAMS = { '7b': 7, '13b': 13, '34b': 34, '70b': 70 };
+
+// ── BITS DEMO ──
+function showBits(type) {
+  document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.btn-' + type).classList.add('active');
+
+  const cfg = BIT_CONFIGS[type];
+  document.getElementById('bits-label').textContent = cfg.label;
+  document.getElementById('bits-desc').textContent = cfg.desc;
+  document.getElementById('info-bits').textContent = cfg.bits;
+  document.getElementById('info-bytes').textContent = cfg.bytes;
+  document.getElementById('info-vals').textContent = cfg.vals;
+  document.getElementById('info-model').textContent = cfg.modelSize;
+  document.getElementById('info-compress').textContent = cfg.compress;
+
+  // generate some bits
+  const sampleBits = generateSampleBits(cfg.bits);
+  const row = document.getElementById('bits-row');
+  row.innerHTML = '';
+
+  sampleBits.forEach((b, i) => {
+    const el = document.createElement('div');
+    el.className = 'bit ' + (b ? 'bit-active' : 'bit-zero');
+    el.style.background = b ? cfg.colors[i] + 'cc' : 'rgba(255,255,255,0.07)';
+    el.textContent = b;
+    row.appendChild(el);
+  });
+
+  // add faded blocks to show what was removed (vs fp32)
+  const removed = 32 - cfg.bits;
+  for (let i = 0; i < removed; i++) {
+    const el = document.createElement('div');
+    el.className = 'bit bit-gray';
+    el.textContent = '×';
+    row.appendChild(el);
+  }
+}
+
+function generateSampleBits(n) {
+  // Hardcoded example: 3.14 in various formats
+  const examples = {
+    32: [0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1,1,1,1,0,1,0,1,1,1,0,0],
+    16: [0,1,0,0,0,0,1,0,0,1,0,0,1,1,1,1],
+    8:  [0,0,0,0,0,0,1,1],
+    4:  [0,0,1,1]
+  };
+  return examples[n] || Array(n).fill(0).map(() => Math.random() > 0.5 ? 1 : 0);
+}
+
+// ── MEMORY BARS ──
+const MEM_DATA = {
+  fp32:  { label: 'FP32',  cls: 'fill-fp32', mult: 4,   color: '#3b82f6' },
+  fp16:  { label: 'FP16',  cls: 'fill-fp16', mult: 2,   color: '#10b981' },
+  int8:  { label: 'INT8',  cls: 'fill-int8', mult: 1,   color: '#f59e0b' },
+  int4:  { label: 'INT4',  cls: 'fill-int4', mult: 0.5, color: '#ef4444' },
+};
+
+function renderMemoryBars(modelKey) {
+  const params = MODEL_PARAMS[modelKey];
+  const maxGB = params * 4 * 1.1;
+  const container = document.getElementById('memory-bars');
+  container.innerHTML = '';
+
+  Object.entries(MEM_DATA).forEach(([key, d]) => {
+    const gb = (params * d.mult).toFixed(1);
+    const pct = Math.min((gb / maxGB) * 100, 100);
+    const row = document.createElement('div');
+    row.className = 'mem-row';
+    row.innerHTML = `
+      <div class="mem-name" style="color:${d.color}">${d.label}</div>
+      <div class="mem-track">
+        <div class="mem-fill ${d.cls}" style="width:0%" data-width="${pct}%">${gb} GB</div>
+      </div>
+      <div class="mem-gb">${gb} GB</div>
+    `;
+    container.appendChild(row);
+  });
+
+  // animate
+  requestAnimationFrame(() => {
+    container.querySelectorAll('.mem-fill').forEach(el => {
+      el.style.width = el.dataset.width;
+    });
+  });
+}
+
+function selectModel(btn, key) {
+  document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMemoryBars(key);
+}
+
+// ── LIVE NUMBER QUANTIZATION ──
+function quantizeFP16(val) {
+  // simplified FP16 simulation: round to ~3 sig figs
+  return parseFloat(val.toPrecision(4));
+}
+function quantizeINT8(val, scale = 10) {
+  const clamped = Math.max(-128, Math.min(127, Math.round(val * scale)));
+  return clamped / scale;
+}
+function quantizeINT4(val, scale = 1) {
+  const clamped = Math.max(-8, Math.min(7, Math.round(val * scale)));
+  return clamped / scale;
+}
+
+function toBinary(val, bits) {
+  if (bits === 32) {
+    const buf = new ArrayBuffer(4);
+    new DataView(buf).setFloat32(0, val);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(2).padStart(8,'0')).join('').split('');
+  }
+  if (bits === 16) {
+    return Array(16).fill(0).map((_, i) => (Math.floor(Math.abs(val) * 100) >> (15-i)) & 1);
+  }
+  if (bits === 8) {
+    const v = Math.max(-128, Math.min(127, Math.round(val * 10)));
+    const unsigned = v < 0 ? v + 256 : v;
+    return unsigned.toString(2).padStart(8, '0').split('');
+  }
+  if (bits === 4) {
+    const v = Math.max(-8, Math.min(7, Math.round(val)));
+    const unsigned = v < 0 ? v + 16 : v;
+    return unsigned.toString(2).padStart(4, '0').split('');
+  }
+}
+
+const PREC_CONFIGS = [
+  { id: 'fp32', label: 'FP32', bits: 32, labelCls: 'label-fp32', bitCls: 'bit-active', bitColor: '#6366f1', fn: v => v },
+  { id: 'fp16', label: 'FP16', bits: 16, labelCls: 'label-fp16', bitCls: 'bit-active', bitColor: '#10b981', fn: quantizeFP16 },
+  { id: 'int8', label: 'INT8', bits: 8,  labelCls: 'label-int8', bitCls: 'bit-active', bitColor: '#f59e0b', fn: quantizeINT8 },
+  { id: 'int4', label: 'INT4', bits: 4,  labelCls: 'label-int4', bitCls: 'bit-active', bitColor: '#ef4444', fn: quantizeINT4 },
+];
+
+function renderPrecisionRows(val) {
+  const container = document.getElementById('precision-rows');
+  container.innerHTML = '';
+
+  PREC_CONFIGS.forEach(cfg => {
+    const quantized = cfg.fn(val);
+    const err = Math.abs(val - quantized);
+    const errPct = val !== 0 ? (err / Math.abs(val) * 100).toFixed(2) : '0.00';
+    const bits = toBinary(quantized, cfg.bits);
+
+    const row = document.createElement('div');
+    row.className = 'prec-row';
+
+    const bitsHtml = bits.map(b => {
+      const color = b == 1 ? cfg.bitColor : 'rgba(255,255,255,0.07)';
+      return `<div class="bit-mini" style="background:${color};color:${b==1?'white':'#334155'}">${b}</div>`;
+    }).join('');
+
+    const errColor = err < 0.001 ? '#10b981' : err < 0.1 ? '#f59e0b' : '#ef4444';
+
+    row.innerHTML = `
+      <div class="prec-row-label ${cfg.labelCls}">${cfg.label}<br><small style="opacity:0.6">${cfg.bits}b</small></div>
+      <div class="prec-bits-mini">${bitsHtml}</div>
+      <div class="prec-num">
+        ${quantized.toFixed(5)}
+        <span style="font-size:0.72rem;color:${errColor};display:block">err: ${errPct}%</span>
+      </div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+document.getElementById('weight-slider').addEventListener('input', function() {
+  const v = parseFloat(this.value);
+  document.getElementById('weight-display').textContent = v.toFixed(5);
+  renderPrecisionRows(v);
+});
+
+// ── PRECISION CARDS ──
+const PREC_CARDS = [
+  {
+    label: 'FP32', type: 'Float 32-bit', color: '#3b82f6',
+    range: '±3.4 × 10³⁸', precision: '~7 decimal digits',
+    quality: 100, speed: 25, memory: 25,
+    use: 'Training, gradient accumulation'
+  },
+  {
+    label: 'FP16', type: 'Float 16-bit', color: '#10b981',
+    range: '±65504', precision: '~3 decimal digits',
+    quality: 99, speed: 60, memory: 50,
+    use: 'Inference, mixed-precision training'
+  },
+  {
+    label: 'INT8', type: 'Integer 8-bit', color: '#f59e0b',
+    range: '-128 → 127', precision: '1/256 of range',
+    quality: 95, speed: 80, memory: 75,
+    use: 'Self-hosted inference, vLLM'
+  },
+  {
+    label: 'INT4', type: 'Integer 4-bit', color: '#ef4444',
+    range: '-8 → 7', precision: '1/16 of range',
+    quality: 85, speed: 100, memory: 100,
+    use: 'Edge, Ollama Q4_K_M, llama.cpp'
+  }
+];
+
+function renderPrecCards() {
+  const grid = document.getElementById('precision-grid');
+  PREC_CARDS.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'prec-card';
+    card.innerHTML = `
+      <div class="prec-header" style="color:${c.color}">${c.label}</div>
+      <div class="prec-type">${c.type}</div>
+      <div class="prec-value" style="color:${c.color}">${c.label.replace('INT','').replace('FP','')}
+        <span style="font-size:0.65rem;color:#475569">bits</span>
+      </div>
+      <div class="prec-range">${c.range}</div>
+      <div style="margin:14px 0 6px;font-size:0.72rem;color:#64748b">${c.precision}</div>
+
+      <div class="prec-stat">
+        <div class="prec-stat-label">Якість</div>
+        <div class="prec-stat-bar"><div class="prec-stat-fill" style="width:0%;background:${c.color};opacity:0.8" data-w="${c.quality}%"></div></div>
+      </div>
+      <div class="prec-stat">
+        <div class="prec-stat-label">Швидкість</div>
+        <div class="prec-stat-bar"><div class="prec-stat-fill" style="width:0%;background:${c.color};opacity:0.6" data-w="${c.speed}%"></div></div>
+      </div>
+      <div class="prec-stat">
+        <div class="prec-stat-label">RAM ефективність</div>
+        <div class="prec-stat-bar"><div class="prec-stat-fill" style="width:0%;background:${c.color};opacity:0.4" data-w="${c.memory}%"></div></div>
+      </div>
+
+      <div style="margin-top:14px;font-size:0.75rem;color:#475569;line-height:1.5">${c.use}</div>
+    `;
+    grid.appendChild(card);
+  });
+
+  // animate on scroll
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('.prec-stat-fill').forEach(el => el.style.width = el.dataset.w);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  grid.querySelectorAll('.prec-card').forEach(el => obs.observe(el));
+}
+
+// ── INIT ──
+showBits('fp32');
+renderMemoryBars('7b');
+renderPrecisionRows(3.14159);
+renderPrecCards();
+</script>
+</body>
+</html>
