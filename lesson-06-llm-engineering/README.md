@@ -19,16 +19,17 @@
 ```
 lesson-06-llm-engineering/
 ├── README.md                    (цей файл)
-├── llm-vs-slm.html             (порівняння архітектур)
+├── llm-vs-slm.html              (порівняння архітектур)
 ├── quantization-demo.html       (демонстрація квантизації)
-├── homework/
-│   ├── extraction_agent.py      (стартовий код)
-│   ├── eval_matrix.xlsx         (шаблон для результатів)
-│   └── HOMEWORK.md              (детальне завдання)
-└── samples/
-    ├── simple_meeting.txt       (простий протокол)
-    ├── chaotic_standup.txt      (хаотична дискусія)
-    └── technical_sync.txt       (технічна зустріч)
+├── finetuning-vs-rag.html       (коли fine-tuning, а коли RAG)
+├── vllm-overview.html           (огляд vLLM для production)
+└── local-llama-demo/            (інтерактивна демка Ollama + OpenAI)
+    ├── app.py                   (FastAPI-бекенд)
+    ├── index.html               (веб-інтерфейс)
+    └── requirements.txt
+
+Стартовий код та приклади текстів для домашнього завдання —
+готуєш сам відповідно до специфікації нижче.
 ```
 
 ---
@@ -58,12 +59,12 @@ lesson-06-llm-engineering/
     {
       "owner": "Анна",
       "task": "Реалізувати API для користувачів",
-      "deadline": "2025-05-15"
+      "deadline": "2026-05-15"
     },
     {
       "owner": "Іван",
       "task": "Дизайн UI prototype",
-      "deadline": "2025-05-10"
+      "deadline": "2026-05-10"
     }
   ],
   "decisions": [
@@ -396,9 +397,9 @@ ollama serve
 
 ## 📝 Дедлайн
 
-**Здачі до:** 2025-06-15
+**Здачі до:** 2026-05-04
 
-**Структура здачи:**
+**Структура здачи:** створи власну папку `homework/` зі всіма файлами, які згенеруєш сам:
 ```
 homework/
 ├── extraction_agent.py       (код)
