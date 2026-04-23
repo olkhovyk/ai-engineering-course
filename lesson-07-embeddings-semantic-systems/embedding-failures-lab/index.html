@@ -455,6 +455,7 @@
   <button class="tab-btn" data-tab="demo2">2. Negation</button>
   <button class="tab-btn" data-tab="demo3">3. Truncation</button>
   <button class="tab-btn" data-tab="demo4">4. Lost in the Middle</button>
+  <button class="tab-btn" data-tab="demo5">5. Domain Mismatch</button>
 </nav>
 
 <details class="keys-bar" id="keysBar">
@@ -694,6 +695,65 @@
     <em>найрелевантніший — першим або останнім</em>. Якщо робиш RAG з довгим контекстом —
     завжди reorder: топ-1 chunk на початок, топ-2 в кінець, решту в середину. Або просто
     менше top-K.
+  </div>
+</section>
+
+<!-- ═══════════════ DEMO 5: Domain Mismatch ═══════════════ -->
+<section class="panel" id="demo5">
+  <h2>🌐 Demo 5 — Domain Mismatch</h2>
+
+  <div class="problem-box">
+    <strong>Проблема:</strong> General-purpose embedders (OpenAI <code>text-embedding-3-small</code>,
+    Cohere <code>embed-english-v3</code>) натреновані переважно на web-тексті. Коли ти подаєш
+    їм <em>код</em>, <em>юридичні тексти</em>, чи <em>медичні записи</em> — модель часто
+    кластеризує за поверхневою лексикою домену, а не за справжнім сенсом.
+  </div>
+
+  <p>
+    У базі — <strong>18 чанків</strong> у 3 доменах (<code>code</code>, <code>legal</code>,
+    <code>general</code>), по 6 на кожен. Вони розбиті на 6 семантичних тем (sort, auth, delete,
+    retry, refund, rate-limiting) — по одному представнику в кожному домені. Ідеальний embedder мав
+    би об'єднувати тексти за <em>темою</em>, а не за <em>доменом</em>.
+  </p>
+
+  <h3>🧬 Embedder model</h3>
+  <p style="font-size: 0.9rem;">
+    Різні моделі по-різному стійкі до domain shift. <code>ada-002</code> — стара (2022),
+    більш схильна до domain bias. <code>3-small</code> — дефолт у 2024. <code>3-large</code>
+    — найякісніша, найдорожча. <strong>Перемикай і дивись різницю у PCA та retrieval.</strong>
+  </p>
+  <div class="radio-group" id="demo5ModelGroup">
+    <label><input type="radio" name="demo5model" value="text-embedding-3-small" checked><span>3-small (default)</span></label>
+    <label><input type="radio" name="demo5model" value="text-embedding-3-large"><span>3-large (best)</span></label>
+    <label><input type="radio" name="demo5model" value="text-embedding-ada-002"><span>ada-002 (old, 2022)</span></label>
+  </div>
+
+  <h3>🔎 Retrieval</h3>
+  <p>Натисни preset або введи свій query:</p>
+  <div class="chips" id="demo5Presets"></div>
+  <div class="controls-row">
+    <input type="text" id="demo5Query" placeholder="e.g. exponential backoff on HTTP failure" style="flex:1; min-width: 250px;">
+    <button class="btn" id="demo5SearchBtn">🔎 Search</button>
+  </div>
+  <div id="demo5SearchStatus"></div>
+  <div id="demo5SearchResults"></div>
+
+  <h3>📊 PCA (2D) — як embedder кластеризує 18 чанків</h3>
+  <p>
+    Кольором — <strong>домен</strong>, формою/номером — <strong>тема</strong>. Якщо embedder
+    розуміє семантику, точки з однаковою темою мають злипатися незалежно від кольору. Якщо модель
+    «domain-biased» — точки кластеризуються за кольором (code/legal/general окремо), а теми
+    плутаються.
+  </p>
+  <button class="btn secondary" id="demo5PcaBtn">📍 Побудувати PCA</button>
+  <div class="chart-wrap"><canvas id="demo5Chart"></canvas></div>
+
+  <div class="conclusion">
+    <strong>Висновок:</strong> General-purpose embedder є компроміс. Для продакшену у
+    domain-heavy задачах обирай <strong>domain-specific моделі</strong>: <code>voyage-code-3</code>
+    або CodeBERT для коду, legal-BERT для юриспруденції, BioBERT/SciBERT для медицини/науки.
+    Або fine-tune свій embedder на доменному корпусі. Альтернатива — hybrid: чанкуй документи
+    за доменом і тримай їх у окремих vector-індексах.
   </div>
 </section>
 
@@ -1160,6 +1220,134 @@ document.getElementById('demo4RunAllBtn').addEventListener('click', async () => 
       }
     });
   } catch (e) { err(resEl, e.message); }
+});
+
+// ═══════════════ DEMO 5: Domain Mismatch ═══════════════
+const demo5Presets = [
+  { text: "how to put numbers in order from small to big",    icon: "📊", topic: "sort-array" },
+  { text: "block people who didn't log in",                   icon: "🔒", topic: "user-auth" },
+  { text: "remove user information from the system",          icon: "🗑️", topic: "data-deletion" },
+  { text: "exponential backoff on HTTP failure",              icon: "🔁", topic: "retry-logic" },
+  { text: "obligation to reimburse customer upon cancellation", icon: "💰", topic: "payment-refund" },
+  { text: "stop users from sending too many requests",        icon: "🚦", topic: "rate-limiting" }
+];
+
+const DOMAIN_COLORS = {
+  code:    '#3b82f6',
+  legal:   '#f59e0b',
+  general: '#22c55e'
+};
+
+const demo5PresetsEl = document.getElementById('demo5Presets');
+demo5PresetsEl.innerHTML = demo5Presets.map(p =>
+  `<span class="chip" data-q="${p.text}" data-topic="${p.topic}">${p.icon} ${p.text}</span>`
+).join('');
+
+demo5PresetsEl.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.getElementById('demo5Query').value = chip.dataset.q;
+    document.getElementById('demo5SearchBtn').dataset.expectedTopic = chip.dataset.topic;
+    document.getElementById('demo5SearchBtn').click();
+  });
+});
+
+function demo5SelectedModel() {
+  const r = document.querySelector('input[name="demo5model"]:checked');
+  return r ? r.value : 'text-embedding-3-small';
+}
+
+document.getElementById('demo5SearchBtn').addEventListener('click', async () => {
+  const q = document.getElementById('demo5Query').value.trim();
+  if (!q) return;
+  const expectedTopic = document.getElementById('demo5SearchBtn').dataset.expectedTopic || null;
+  const model = demo5SelectedModel();
+  const status = document.getElementById('demo5SearchStatus');
+  const resEl = document.getElementById('demo5SearchResults');
+  loading(status, `Embedding query + scoring (${model})`);
+  resEl.innerHTML = '';
+  try {
+    const data = await api('/api/demo5/search', { query: q, model });
+    status.innerHTML = '';
+
+    // Count how many of top-3 match the expected topic (if we know it)
+    let topicMatchInfo = '';
+    if (expectedTopic) {
+      const top3 = data.results.slice(0, 3);
+      const hits = top3.filter(r => r.topic === expectedTopic).length;
+      if (hits === 3) {
+        topicMatchInfo = `<div class="success-box">✓ Усі top-3 результати потрапили у правильну тему <code>${expectedTopic}</code>. Embedder спрацював добре.</div>`;
+      } else if (hits === 0) {
+        topicMatchInfo = `<div class="warning-box">✗ Жоден з top-3 не з правильної теми <code>${expectedTopic}</code> — embedder кластеризує за доменом, а не за сенсом.</div>`;
+      } else {
+        topicMatchInfo = `<div class="warning-box">⚠️ Тільки ${hits} з top-3 у правильній темі <code>${expectedTopic}</code>. Часткове domain bias.</div>`;
+      }
+    }
+
+    const rows = data.results.map((r, i) => {
+      const color = DOMAIN_COLORS[r.domain];
+      const isExpected = expectedTopic && r.topic === expectedTopic;
+      const badge = `<span style="display:inline-block; padding:0.1rem 0.45rem; border-radius:4px; font-size:0.72rem; font-weight:600; background:${color}33; color:${color}; margin-left:0.3rem;">${r.domain}</span>`;
+      const topicBadge = `<span style="font-family:monospace; font-size:0.72rem; color:#94a3b8; margin-left:0.3rem;">[${r.topic}]</span>`;
+      return `
+        <div class="result-row ${isExpected ? 'highlight-correct' : ''}">
+          <span class="rk">#${i + 1}</span>
+          <span class="tx">${truncate(r.text, 140)}${badge}${topicBadge}</span>
+          <span class="sc">${r.score.toFixed(3)}</span>
+        </div>
+      `;
+    }).join('');
+
+    resEl.innerHTML = topicMatchInfo + rows;
+  } catch (e) { err(status, e.message); }
+});
+
+let demo5Chart = null;
+document.getElementById('demo5PcaBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('demo5PcaBtn');
+  const model = demo5SelectedModel();
+  btn.disabled = true;
+  btn.textContent = `Embedding (${model})…`;
+  try {
+    const data = await api('/api/demo5/pca', { model });
+
+    // Group by domain
+    const byDomain = { code: [], legal: [], general: [] };
+    data.points.forEach(p => byDomain[p.domain].push(p));
+
+    const datasets = Object.entries(byDomain).map(([domain, pts]) => ({
+      label: domain + ' (' + pts.length + ')',
+      data: pts.map(p => ({ x: p.x, y: p.y, label: p.label, topic: p.topic, domain: p.domain })),
+      backgroundColor: DOMAIN_COLORS[domain],
+      pointRadius: 9,
+      pointHoverRadius: 12
+    }));
+
+    if (demo5Chart) demo5Chart.destroy();
+    demo5Chart = new Chart(document.getElementById('demo5Chart'), {
+      type: 'scatter',
+      data: { datasets },
+      options: {
+        responsive: true,
+        plugins: {
+          title: { display: true, text: `PCA · ${data.model}`, color: '#fde68a' },
+          legend: { labels: { color: '#cbd5e1' } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => [`[${ctx.raw.domain}/${ctx.raw.topic}]`, ctx.raw.label]
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+          y: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        }
+      }
+    });
+  } catch (e) { alert(e.message); }
+  finally {
+    btn.disabled = false;
+    btn.textContent = '📍 Побудувати PCA';
+  }
 });
 </script>
 

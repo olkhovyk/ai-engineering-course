@@ -4,7 +4,9 @@
     {"id": 2, "a": "This drug is safe for pregnancy", "b": "This drug is NOT safe for pregnancy"},
     {"id": 3, "a": "Laptops with touchscreen", "b": "Laptops without touchscreen"},
     {"id": 4, "a": "Happy customer reviews", "b": "Unhappy customer reviews"},
-    {"id": 5, "a": "Recommended for beginners", "b": "Not recommended for beginners"}
+    {"id": 5, "a": "Recommended for beginners", "b": "Not recommended for beginners"},
+    {"id": 6, "a": "The surgery was a complete success", "b": "The surgery was a complete failure"},
+    {"id": 7, "a": "Patient may take ibuprofen during pregnancy", "b": "Patient must NOT take ibuprofen during pregnancy"}
   ],
   "statements": [
     {"id": 1, "text": "Acetaminophen is safe for use during pregnancy when taken at recommended doses.", "label": "safe"},

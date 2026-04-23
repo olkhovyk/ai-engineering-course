@@ -56,6 +56,9 @@ with open(os.path.join(DATA_DIR, "medical_texts.json"), "r", encoding="utf-8") a
 with open(os.path.join(DATA_DIR, "qa_passages.json"), "r", encoding="utf-8") as f:
     QA = json.load(f)
 
+with open(os.path.join(DATA_DIR, "domain_mismatch.json"), "r", encoding="utf-8") as f:
+    DOMAIN_DATA = json.load(f)
+
 with open(os.path.join(DATA_DIR, "long_doc.txt"), "r", encoding="utf-8") as f:
     LONG_DOC = f.read()
 
@@ -471,6 +474,88 @@ async def demo4_run(req: Demo4Request, x_openai_key: Optional[str] = Header(None
     for pos in positions:
         results.append(await run_single(client, pos, req.total_chunks))
     return {"results": results, "total_chunks": req.total_chunks}
+
+
+# ─── Demo 5: Domain Mismatch ──────────────────────────────────────────────────
+
+
+ALLOWED_EMBED_MODELS = {
+    "text-embedding-3-small",
+    "text-embedding-3-large",
+    "text-embedding-ada-002",
+}
+
+
+class Demo5SearchRequest(BaseModel):
+    query: str
+    model: str = "text-embedding-3-small"
+
+
+@app.post("/api/demo5/search")
+async def demo5_search(req: Demo5SearchRequest, x_openai_key: Optional[str] = Header(None)):
+    """
+    Retrieve top matches across 18 mixed-domain chunks (code/legal/general)
+    using a general-purpose embedder. Show which domain each hit came from —
+    often the embedder groups by surface domain lexicon rather than by semantics.
+    """
+    if req.model not in ALLOWED_EMBED_MODELS:
+        raise HTTPException(status_code=400, detail=f"Unknown model: {req.model}")
+    client = get_openai_client(x_openai_key)
+
+    chunks = DOMAIN_DATA["chunks"]
+    texts = [c["text"] for c in chunks]
+
+    doc_embeds = await embed_batch(client, texts, model=req.model)
+    query_embed = (await embed_batch(client, [req.query], model=req.model))[0]
+
+    sims = [cosine(query_embed, e) for e in doc_embeds]
+    ranked = sorted(
+        [
+            {
+                "id": chunks[i]["id"],
+                "text": chunks[i]["text"],
+                "domain": chunks[i]["domain"],
+                "topic": chunks[i]["topic"],
+                "score": float(sims[i]),
+            }
+            for i in range(len(chunks))
+        ],
+        key=lambda x: -x["score"],
+    )
+    return {"results": ranked[:10], "total": len(chunks), "model": req.model}
+
+
+class Demo5PcaRequest(BaseModel):
+    model: str = "text-embedding-3-small"
+
+
+@app.post("/api/demo5/pca")
+async def demo5_pca(req: Demo5PcaRequest, x_openai_key: Optional[str] = Header(None)):
+    """2D projection of all 18 chunks so students can see domain clusters."""
+    if req.model not in ALLOWED_EMBED_MODELS:
+        raise HTTPException(status_code=400, detail=f"Unknown model: {req.model}")
+    client = get_openai_client(x_openai_key)
+
+    chunks = DOMAIN_DATA["chunks"]
+    texts = [c["text"] for c in chunks]
+    embeds = await embed_batch(client, texts, model=req.model)
+
+    X = embeds - embeds.mean(axis=0, keepdims=True)
+    U, S, Vt = np.linalg.svd(X, full_matrices=False)
+    coords_2d = U[:, :2] * S[:2]
+
+    points = [
+        {
+            "id": chunks[i]["id"],
+            "label": chunks[i]["text"][:60] + ("…" if len(chunks[i]["text"]) > 60 else ""),
+            "domain": chunks[i]["domain"],
+            "topic": chunks[i]["topic"],
+            "x": float(coords_2d[i, 0]),
+            "y": float(coords_2d[i, 1]),
+        }
+        for i in range(len(chunks))
+    ]
+    return {"points": points, "model": req.model}
 
 
 if __name__ == "__main__":
