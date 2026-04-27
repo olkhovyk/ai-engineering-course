@@ -1,0 +1,7 @@
+Dataset,Provider,JSON,Tasks,Halluc,Tokens,Cost,Latency
+simple,Ollama,yes,3/3,+4,269,$0,36.53s
+simple,OpenAI,yes,3/3,0,237,$0.00000007,7.11s
+chaotic,Ollama,no,0/4,N/A,331,$0,72.17s
+chaotic,OpenAI,yes,5/4,0,461,$0.00000014,5.99s
+technical,Ollama,no,0/5,N/A,424,$0,64.65s
+technical,OpenAI,yes,6/5,0,584,$0.00000018,9.71s

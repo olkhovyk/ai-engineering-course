@@ -1,0 +1,41 @@
+{
+  "summary": "На зустрічі обговорили імпорт ігрових даних у RAG-сервіс та визначили відповідальних за виконання завдань.",
+  "tasks": [
+    {
+      "owner": "Дмитро",
+      "task": "Переписати chunker для збереження заголовка секції",
+      "deadline": "14 травня 2026"
+    },
+    {
+      "owner": "Олена",
+      "task": "Оновити схему payload і міграційний скрипт для Qdrant",
+      "deadline": "13 травня 2026"
+    },
+    {
+      "owner": "Максим",
+      "task": "Створити endpoint для ручного reindex",
+      "deadline": "15 травня 2026"
+    },
+    {
+      "owner": "Ірина",
+      "task": "Додати блок citations у chat UI",
+      "deadline": "16 травня 2026"
+    },
+    {
+      "owner": "Олена",
+      "task": "Додати structured logs для моніторингу",
+      "deadline": "14 травня 2026"
+    },
+    {
+      "owner": "Ірина",
+      "task": "Додати empty state для випадку, коли citations порожні",
+      "deadline": "разом із блоком citations"
+    }
+  ],
+  "decisions": [
+    "endpoint reindex закриваємо admin token, без публічного доступу",
+    "reindex має працювати асинхронно",
+    "залишаємо поточну embedding model для демо",
+    "rollback через alias при невдалому reindex"
+  ]
+}
