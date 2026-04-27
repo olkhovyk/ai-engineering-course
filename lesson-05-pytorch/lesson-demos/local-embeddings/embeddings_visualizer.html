@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Локальні Embeddings для RAG — Інтерактивна демонстрація</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; padding: 20px; }
+h1 { text-align: center; color: #58a6ff; font-size: 1.5em; margin-bottom: 4px; }
+.subtitle { text-align: center; color: #484f58; font-size: 0.85em; margin-bottom: 20px; }
+.container { max-width: 1100px; margin: 0 auto; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+.tab {
+  padding: 8px 16px; border: 1px solid #30363d; border-radius: 6px;
+  background: #161b22; color: #8b949e; cursor: pointer; font-size: 0.85em; transition: all 0.2s;
+}
+.tab:hover { color: #c9d1d9; border-color: #484f58; }
+.tab.active { color: #58a6ff; border-color: #58a6ff; background: #0d1117; }
+
+.panel { display: none; }
+.panel.visible { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Cards */
+.card {
+  background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+  padding: 16px; margin-bottom: 16px;
+}
+.card-title { color: #58a6ff; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+
+/* Story steps */
+.story-step {
+  display: flex; gap: 12px; margin: 12px 0; padding: 12px; border-radius: 8px;
+  border: 1px solid #30363d;
+}
+.story-num {
+  width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-weight: bold; font-size: 0.9em; flex-shrink: 0;
+}
+.story-fail { border-color: #f8514930; }
+.story-fail .story-num { background: #da36331a; color: #f85149; }
+.story-ok { border-color: #3fb95030; }
+.story-ok .story-num { background: #2386361a; color: #3fb950; }
+.story-crash { border-color: #f85149; background: #da36330a; }
+.story-crash .story-num { background: #f85149; color: #fff; }
+
+/* Search demo */
+.search-box {
+  display: flex; gap: 8px; margin: 12px 0;
+}
+.search-input {
+  flex: 1; padding: 10px 14px; background: #0d1117; border: 1px solid #30363d;
+  border-radius: 6px; color: #c9d1d9; font-size: 1em; font-family: inherit;
+}
+.search-input:focus { outline: none; border-color: #58a6ff; }
+.search-btn {
+  padding: 10px 20px; background: #238636; border: none; border-radius: 6px;
+  color: #fff; cursor: pointer; font-size: 0.9em; transition: background 0.2s;
+}
+.search-btn:hover { background: #2ea043; }
+
+.result-item {
+  display: flex; gap: 12px; padding: 10px; margin: 6px 0; border-radius: 6px;
+  border: 1px solid #30363d; transition: all 0.3s; align-items: center;
+}
+.result-score {
+  min-width: 50px; text-align: center; font-family: monospace; font-size: 0.9em;
+  padding: 4px 8px; border-radius: 4px;
+}
+.result-bar { height: 6px; border-radius: 3px; transition: width 0.5s ease; }
+.result-text { font-size: 0.9em; color: #8b949e; flex: 1; }
+
+/* Vector visualization */
+.vec-display {
+  display: flex; gap: 1px; margin: 8px 0; height: 30px; border-radius: 4px; overflow: hidden;
+}
+.vec-cell-vis {
+  flex: 1; min-width: 3px; transition: background 0.3s;
+}
+
+/* Comparison table */
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+.cmp-table th { padding: 8px; color: #484f58; text-align: left; border-bottom: 1px solid #30363d; }
+.cmp-table td { padding: 8px; border-bottom: 1px solid #21262d; }
+.cmp-table .local { color: #3fb950; }
+.cmp-table .api { color: #58a6ff; }
+
+/* Pooling demo */
+.pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 4px; margin: 8px 0; }
+.pool-token {
+  padding: 6px; text-align: center; border-radius: 4px; font-size: 0.8em;
+  border: 1px solid #30363d; font-family: monospace;
+}
+
+/* Batch chart */
+.batch-chart { display: flex; align-items: flex-end; gap: 4px; height: 160px; margin: 12px 0; padding: 0 20px; }
+.batch-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.batch-bar {
+  width: 100%; border-radius: 4px 4px 0 0; transition: height 0.5s ease;
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px;
+  font-size: 0.7em; color: #fff;
+}
+.batch-label { font-size: 0.75em; color: #8b949e; text-align: center; }
+
+/* Code */
+.code-box {
+  background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+  padding: 12px; font-family: 'SF Mono', monospace; font-size: 0.82em;
+  line-height: 1.6; overflow-x: auto; color: #c9d1d9; margin: 8px 0;
+  white-space: pre;
+}
+.code-box .kw { color: #ff7b72; }
+.code-box .fn { color: #d2a8ff; }
+.code-box .str { color: #a5d6ff; }
+.code-box .cm { color: #484f58; }
+
+/* Info badges */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; }
+.badge-green { background: #2386361a; color: #3fb950; border: 1px solid #3fb95030; }
+.badge-red { background: #da36331a; color: #f85149; border: 1px solid #f8514930; }
+.badge-blue { background: #0d419d1a; color: #58a6ff; border: 1px solid #58a6ff30; }
+</style>
+</head>
+<body>
+
+<h1>Локальні Embeddings для RAG</h1>
+<p class="subtitle">Чому PyTorch • Як працює під капотом • Production батчінг</p>
+
+<div class="container">
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab(0)">Кейс</div>
+  <div class="tab" onclick="showTab(1)">Пошук (демо)</div>
+  <div class="tab" onclick="showTab(2)">Під капотом</div>
+  <div class="tab" onclick="showTab(3)">Пулінг</div>
+  <div class="tab" onclick="showTab(4)">Батчінг</div>
+  <div class="tab" onclick="showTab(5)">API vs Локальна</div>
+  <div class="tab" onclick="showTab(6)">Код</div>
+</div>
+
+<!-- Tab 0: Case -->
+<div class="panel visible" id="panel0">
+  <div class="card">
+    <div class="card-title">Реальний сценарій: RAG для внутрішньої документації</div>
+    <p style="color:#8b949e;margin-bottom:12px">Компанія будує пошук по 500,000 медичних записів.</p>
+
+    <div class="story-step story-fail">
+      <div class="story-num">1</div>
+      <div>
+        <strong style="color:#c9d1d9">OpenAI text-embedding-ada-002</strong>
+        <span class="badge badge-red">відхилено</span><br>
+        <span style="color:#8b949e">Compliance-команда: медичні дані не можуть залишати наші сервери (HIPAA/GDPR).</span>
+      </div>
+    </div>
+
+    <div class="story-step story-ok">
+      <div class="story-num">2</div>
+      <div>
+        <strong style="color:#c9d1d9">sentence-transformers/all-MiniLM-L6-v2</strong>
+        <span class="badge badge-green">обрано</span><br>
+        <span style="color:#8b949e">22M параметрів, 384-dim embeddings. Працює локально через PyTorch. Дані залишаються на сервері.</span>
+      </div>
+    </div>
+
+    <div class="story-step story-crash">
+      <div class="story-num">!</div>
+      <div>
+        <strong style="color:#f85149">OOM через 10 хвилин</strong><br>
+        <span style="color:#8b949e">Розробник забув <code>model.eval()</code> і <code>torch.no_grad()</code>.
+        Кожен запит зберігав computation graph → пам'ять текла → 💥</span><br>
+        <span style="color:#484f58">(детальніше — у oom_visualizer.html)</span>
+      </div>
+    </div>
+
+    <div class="story-step story-ok">
+      <div class="story-num">✓</div>
+      <div>
+        <strong style="color:#3fb950">Виправлено: 2 рядки коду</strong><br>
+        <span style="color:#8b949e"><code>model.eval()</code> + <code>torch.inference_mode()</code> → пам'ять стабільна, сервіс працює 24/7.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Чому локально, а не API?</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">
+      <div style="padding:12px;background:#2386361a;border-radius:6px">
+        <div style="font-size:1.5em">🔒</div>
+        <div style="color:#3fb950;font-size:0.85em;margin-top:4px">Конфіденційність</div>
+        <div style="color:#484f58;font-size:0.75em">Дані на сервері</div>
+      </div>
+      <div style="padding:12px;background:#2386361a;border-radius:6px">
+        <div style="font-size:1.5em">💰</div>
+        <div style="color:#3fb950;font-size:0.85em;margin-top:4px">$0 вартість</div>
+        <div style="color:#484f58;font-size:0.75em">Свій GPU</div>
+      </div>
+      <div style="padding:12px;background:#2386361a;border-radius:6px">
+        <div style="font-size:1.5em">🔧</div>
+        <div style="color:#3fb950;font-size:0.85em;margin-top:4px">Fine-tuning</div>
+        <div style="color:#484f58;font-size:0.75em">Адаптація під домен</div>
+      </div>
+      <div style="padding:12px;background:#2386361a;border-radius:6px">
+        <div style="font-size:1.5em">⚡</div>
+        <div style="color:#3fb950;font-size:0.85em;margin-top:4px">Latency</div>
+        <div style="color:#484f58;font-size:0.75em">Без мережі</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 1: Search demo -->
+<div class="panel" id="panel1">
+  <div class="card">
+    <div class="card-title">Пошук по документації (симуляція)</div>
+    <p style="color:#8b949e;font-size:0.88em;margin-bottom:8px">
+      Введи запит — побачиш cosine similarity кожного документа з запитом.
+      Це те, що робить vector DB (Qdrant, Pinecone) під капотом.
+    </p>
+    <div class="search-box">
+      <input class="search-input" id="searchInput" type="text" value="як змінити пароль" placeholder="Введи запит...">
+      <button class="search-btn" onclick="doSearch()">Знайти</button>
+    </div>
+    <div id="searchResults"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Embedding запиту (вектор із 384 чисел)</div>
+    <p style="color:#484f58;font-size:0.8em;margin-bottom:4px">Кожна клітинка = одне число. Синій = негативне, помаранчевий = позитивне.</p>
+    <div class="vec-display" id="queryVec"></div>
+    <p style="color:#484f58;font-size:0.75em;margin-top:4px">Cosine similarity = наскільки "напрямки" двох векторів збігаються (1.0 = ідентичні, 0 = ортогональні)</p>
+  </div>
+</div>
+
+<!-- Tab 2: Under the hood -->
+<div class="panel" id="panel2">
+  <div class="card">
+    <div class="card-title">Що відбувається під капотом model.encode("текст")</div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="badge badge-blue">Крок 1</span>
+        <span style="color:#c9d1d9">Токенізація</span>
+        <span style="color:#484f58;font-size:0.85em">— текст → token IDs</span>
+      </div>
+      <div class="code-box"><span class="cm"># "як змінити пароль" →</span>
+[101, 1210, 23925, 1187, 29745, 29760, 18947, 102]
+<span class="cm"># 101 = [CLS], 102 = [SEP] — спеціальні токени BERT</span></div>
+
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="badge badge-blue">Крок 2</span>
+        <span style="color:#c9d1d9">Forward pass через transformer</span>
+        <span style="color:#484f58;font-size:0.85em">— token IDs → hidden states</span>
+      </div>
+      <div class="code-box"><span class="kw">with</span> torch.inference_mode():       <span class="cm"># без графу!</span>
+    outputs = model(**encoded)
+<span class="cm"># outputs.last_hidden_state: shape (1, 8, 384)</span>
+<span class="cm"># = 1 речення × 8 токенів × 384-dim вектор кожного</span></div>
+
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="badge badge-blue">Крок 3</span>
+        <span style="color:#c9d1d9">Пулінг</span>
+        <span style="color:#484f58;font-size:0.85em">— 8 векторів → 1 вектор</span>
+      </div>
+      <div class="code-box"><span class="cm"># Mean pooling: усереднюємо вектори всіх токенів</span>
+<span class="cm"># (ігноруємо padding через attention_mask)</span>
+pooled = mean_pooling(hidden_states, attention_mask)
+<span class="cm"># shape: (1, 384) — один вектор для всього речення</span></div>
+
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="badge badge-blue">Крок 4</span>
+        <span style="color:#c9d1d9">Нормалізація</span>
+        <span style="color:#484f58;font-size:0.85em">— для cosine similarity</span>
+      </div>
+      <div class="code-box">normalized = F.normalize(pooled, dim=-1)
+<span class="cm"># Вектор стає unit length (довжина = 1)</span>
+<span class="cm"># Тепер dot product = cosine similarity</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 3: Pooling -->
+<div class="panel" id="panel3">
+  <div class="card">
+    <div class="card-title">Пулінг: як зібрати 1 вектор з N токенів</div>
+    <p style="color:#8b949e;font-size:0.88em;margin-bottom:12px">
+      Transformer видає вектор для КОЖНОГО токена. Нам потрібен один вектор для всього речення. Як?
+    </p>
+
+    <div id="poolingDemo"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Порівняння стратегій пулінгу</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+      <div style="padding:12px;background:#0d1117;border-radius:6px;border:1px solid #30363d">
+        <div style="color:#3fb950;font-size:0.9em;margin-bottom:6px"><strong>Mean Pooling</strong> <span class="badge badge-green">стандарт</span></div>
+        <div style="color:#8b949e;font-size:0.82em;line-height:1.6">
+          Середнє всіх токенів (з attention mask).<br>
+          Використовується у sentence-transformers.<br>
+          <strong style="color:#c9d1d9">Similarity: 0.721</strong>
+        </div>
+      </div>
+      <div style="padding:12px;background:#0d1117;border-radius:6px;border:1px solid #30363d">
+        <div style="color:#d29922;font-size:0.9em;margin-bottom:6px"><strong>CLS Token</strong></div>
+        <div style="color:#8b949e;font-size:0.82em;line-height:1.6">
+          Перший токен [CLS] — як у BERT.<br>
+          Не завжди добре для sentence similarity.<br>
+          <strong style="color:#c9d1d9">Similarity: 0.314</strong>
+        </div>
+      </div>
+      <div style="padding:12px;background:#0d1117;border-radius:6px;border:1px solid #30363d">
+        <div style="color:#f85149;font-size:0.9em;margin-bottom:6px"><strong>Max Pooling</strong></div>
+        <div style="color:#8b949e;font-size:0.82em;line-height:1.6">
+          Максимум по кожному виміру.<br>
+          Рідко використовується для embeddings.<br>
+          <strong style="color:#c9d1d9">Similarity: 0.225</strong>
+        </div>
+      </div>
+    </div>
+    <p style="color:#484f58;font-size:0.8em;margin-top:8px">
+      Similarity виміряна між "як змінити пароль" і "Для скидання пароля перейдіть у Налаштування"
+    </p>
+  </div>
+</div>
+
+<!-- Tab 4: Batching -->
+<div class="panel" id="panel4">
+  <div class="card">
+    <div class="card-title">Батчінг: чому batch=64 в 9x швидше за batch=1</div>
+    <p style="color:#8b949e;font-size:0.88em;margin-bottom:12px">
+      Натисни щоб побачити як throughput зростає з розміром батчу:
+    </p>
+    <button class="search-btn" onclick="animateBatching()" id="batchBtn">▶ Запустити бенчмарк</button>
+    <div class="batch-chart" id="batchChart"></div>
+    <div id="batchResult" style="color:#484f58;font-size:0.85em;margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Чому батчінг швидший</div>
+    <div style="color:#8b949e;font-size:0.88em;line-height:1.8">
+      <strong style="color:#c9d1d9">batch=1:</strong> кожен документ окремо → Python loop overhead + GPU idle між запитами<br>
+      <strong style="color:#c9d1d9">batch=64:</strong> 64 документи одночасно → одна матрична операція на GPU<br><br>
+      GPU створений для паралельних обчислень. Один документ використовує 1% потужності GPU.
+      64 документи — 64% потужності. Та сама операція, але GPU не простоює.<br><br>
+      <strong style="color:#d29922">Production math (500,000 документів):</strong><br>
+      batch=1: ~1.3 годин &nbsp;&nbsp;|&nbsp;&nbsp; batch=64: ~9 хвилин<br>
+      <strong style="color:#3fb950">Та сама модель, те саме залізо. Тільки batch size змінився.</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 5: API vs Local -->
+<div class="panel" id="panel5">
+  <div class="card">
+    <div class="card-title">Порівняння: локальна модель vs OpenAI API</div>
+    <table class="cmp-table">
+      <tr><th></th><th class="local">Локальна (MiniLM)</th><th class="api">OpenAI API</th></tr>
+      <tr><td>Розмірність</td><td class="local">384</td><td class="api">1536</td></tr>
+      <tr><td>Конфіденційність</td><td class="local">Дані на сервері ✓</td><td class="api">Дані в хмарі ✗</td></tr>
+      <tr><td>500K документів</td><td class="local">$0</td><td class="api">~$10</td></tr>
+      <tr><td>50M документів</td><td class="local">$0</td><td class="api">~$1,000</td></tr>
+      <tr><td>Latency</td><td class="local">~1 ms/doc</td><td class="api">~50 ms/doc</td></tr>
+      <tr><td>Fine-tuning</td><td class="local">Так (PyTorch)</td><td class="api">Ні</td></tr>
+      <tr><td>Offline</td><td class="local">Так</td><td class="api">Ні</td></tr>
+      <tr><td>Якість (MTEB)</td><td style="color:#d29922">56.3</td><td class="api">62.3</td></tr>
+    </table>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-title" style="color:#3fb950">Коли обирати локальну</div>
+      <div style="color:#8b949e;font-size:0.88em;line-height:1.8">
+        ✓ Дані конфіденційні (медицина, фінанси)<br>
+        ✓ Великий обсяг (мільйони документів)<br>
+        ✓ Потрібен fine-tuning під домен<br>
+        ✓ Потрібна робота без інтернету
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:#58a6ff">Коли обирати API</div>
+      <div style="color:#8b949e;font-size:0.88em;line-height:1.8">
+        ✓ Маленький обсяг (до 100K)<br>
+        ✓ Не хочеш GPU інфраструктуру<br>
+        ✓ Потрібна найвища якість з коробки<br>
+        ✓ Прототипування / MVP
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 6: Code -->
+<div class="panel" id="panel6">
+  <div class="card">
+    <div class="card-title">Production код: embedding-сервіс</div>
+    <div class="code-box"><span class="kw">from</span> transformers <span class="kw">import</span> AutoModel, AutoTokenizer
+<span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn.functional <span class="kw">as</span> F
+
+MODEL = <span class="str">'sentence-transformers/all-MiniLM-L6-v2'</span>
+tokenizer = AutoTokenizer.from_pretrained(MODEL)
+model = AutoModel.from_pretrained(MODEL).to(<span class="str">'cuda'</span>)
+model.eval()                                  <span class="cm"># dropout OFF</span>
+
+<span class="kw">def</span> <span class="fn">mean_pooling</span>(hidden, mask):
+    m = mask.unsqueeze(-1).float()
+    <span class="kw">return</span> (hidden * m).sum(1) / m.sum(1).clamp(min=1e-9)
+
+<span class="kw">def</span> <span class="fn">embed</span>(texts: list[str]):
+    enc = tokenizer(texts, padding=True, truncation=True,
+                    max_length=128, return_tensors=<span class="str">'pt'</span>).to(<span class="str">'cuda'</span>)
+    <span class="kw">with</span> torch.inference_mode():           <span class="cm"># граф OFF</span>
+        h = model(**enc).last_hidden_state
+        pooled = mean_pooling(h, enc[<span class="str">'attention_mask'</span>])
+    <span class="kw">return</span> F.normalize(pooled, dim=-1)
+
+<span class="cm"># Використання:</span>
+embeddings = embed([<span class="str">"як змінити пароль"</span>, <span class="str">"скинути пароль"</span>])
+similarity = (embeddings[0] @ embeddings[1]).item()  <span class="cm"># 0.89</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Чеклист для production</div>
+    <div style="color:#8b949e;font-size:0.88em;line-height:2">
+      <span style="color:#3fb950">1.</span> <code>model.eval()</code> — вимкнути dropout (один раз при завантаженні)<br>
+      <span style="color:#3fb950">2.</span> <code>torch.inference_mode()</code> — кожен виклик (без memory leak)<br>
+      <span style="color:#3fb950">3.</span> Батчінг: <code>batch_size=64</code> — 9x швидше за batch=1<br>
+      <span style="color:#3fb950">4.</span> <code>F.normalize()</code> — L2 нормалізація для cosine similarity<br>
+      <span style="color:#3fb950">5.</span> <code>padding=True, truncation=True</code> — обробка різної довжини
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ---- Tabs ----
+function showTab(idx) {
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+  document.querySelectorAll('.panel').forEach((p, i) => p.classList.toggle('visible', i === idx));
+  if (idx === 1) doSearch();
+  if (idx === 3) initPooling();
+}
+
+// ---- Fake documents & embeddings ----
+const DOCS = [
+  "Для скидання пароля перейдіть у Налаштування → Безпека → Змінити пароль",
+  "Оплата підписки відбувається автоматично першого числа кожного місяця",
+  "Для підключення API потрібно згенерувати ключ у розділі Інтеграції",
+  "Якщо додаток не запускається, спробуйте очистити кеш у налаштуваннях",
+  "Корпоративний тариф включає необмежену кількість користувачів",
+  "Двофакторна автентифікація вмикається через Google Authenticator",
+  "Резервне копіювання даних відбувається щоночі о 03:00",
+  "Для експорту даних оберіть Звіти → Експорт → CSV або JSON",
+  "Підтримка працює з 9:00 до 18:00 за київським часом",
+  "Видалення акаунту можливе через запит у службу підтримки",
+];
+
+// Keyword-based similarity (simulated)
+function fakeSimilarity(query, doc) {
+  const q = query.toLowerCase();
+  const d = doc.toLowerCase();
+  const qWords = q.split(/\s+/);
+  let score = 0.15 + Math.random() * 0.1;
+  for (const w of qWords) {
+    if (w.length < 3) continue;
+    if (d.includes(w)) score += 0.2;
+    // Partial match
+    for (const dw of d.split(/\s+/)) {
+      if (dw.startsWith(w.slice(0, 3)) || w.startsWith(dw.slice(0, 3))) score += 0.05;
+    }
+  }
+  // Related concepts
+  const related = {
+    'пароль': ['скидання', 'безпека', 'змінити', 'автентифікація'],
+    'оплата': ['підписки', 'тариф', 'рахунок'],
+    'api': ['ключ', 'інтеграції', 'підключення'],
+    'дані': ['експорт', 'копіювання', 'резервне'],
+  };
+  for (const [key, vals] of Object.entries(related)) {
+    if (q.includes(key)) {
+      for (const v of vals) if (d.toLowerCase().includes(v)) score += 0.1;
+    }
+  }
+  return Math.min(score, 0.95);
+}
+
+function fakeVector(seed) {
+  let s = seed;
+  const vec = [];
+  for (let i = 0; i < 48; i++) {
+    s = (s * 16807 + 7) % 2147483647;
+    vec.push((s / 2147483647) * 2 - 1);
+  }
+  return vec;
+}
+
+function vecColor(v) {
+  if (v >= 0) return `rgba(255, 152, 0, ${Math.abs(v)})`;
+  return `rgba(66, 165, 245, ${Math.abs(v)})`;
+}
+
+// ---- Search ----
+function doSearch() {
+  const query = document.getElementById('searchInput').value;
+  const results = DOCS.map((doc, i) => ({
+    doc, idx: i,
+    score: fakeSimilarity(query, doc)
+  })).sort((a, b) => b.score - a.score);
+
+  const container = document.getElementById('searchResults');
+  container.innerHTML = '';
+
+  results.forEach((r, rank) => {
+    const item = document.createElement('div');
+    item.className = 'result-item';
+    const hue = r.score > 0.5 ? 120 : r.score > 0.3 ? 40 : 0;
+    const satColor = `hsl(${hue}, 70%, 45%)`;
+    item.innerHTML = `
+      <div class="result-score" style="background:${satColor}20;color:${satColor};border:1px solid ${satColor}40">${r.score.toFixed(3)}</div>
+      <div style="flex:1">
+        <div class="result-text" style="color:${rank < 3 ? '#c9d1d9' : '#8b949e'}">${r.doc}</div>
+        <div class="result-bar" style="width:${r.score * 100}%;background:${satColor};margin-top:4px"></div>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+
+  // Query vector visualization
+  const vecDiv = document.getElementById('queryVec');
+  vecDiv.innerHTML = '';
+  const vec = fakeVector(query.length * 7 + query.charCodeAt(0));
+  vec.forEach(v => {
+    const cell = document.createElement('div');
+    cell.className = 'vec-cell-vis';
+    cell.style.background = vecColor(v);
+    vecDiv.appendChild(cell);
+  });
+}
+
+// ---- Pooling demo ----
+function initPooling() {
+  const container = document.getElementById('poolingDemo');
+  if (container.children.length > 0) return;
+
+  const tokens = ['[CLS]', 'як', 'зміни', '##ти', 'пароль', '[SEP]', '[PAD]', '[PAD]'];
+  const mask =   [1, 1, 1, 1, 1, 1, 0, 0];
+
+  const grid = document.createElement('div');
+  grid.className = 'pool-grid';
+  tokens.forEach((t, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'pool-token';
+    const color = mask[i] ? '#3fb950' : '#484f58';
+    cell.style.borderColor = mask[i] ? '#3fb95040' : '#30363d';
+    cell.innerHTML = `<div style="color:${color}">${t}</div>
+      <div style="color:#484f58;font-size:0.7em;margin-top:2px">${mask[i] ? 'vec 384d' : 'ігнорувати'}</div>`;
+    grid.appendChild(cell);
+  });
+  container.appendChild(grid);
+
+  const explain = document.createElement('div');
+  explain.style.cssText = 'color:#8b949e;font-size:0.85em;line-height:1.7;margin-top:12px';
+  explain.innerHTML = `
+    <strong style="color:#c9d1d9">Mean pooling</strong> = (vec<sub>CLS</sub> + vec<sub>як</sub> + vec<sub>зміни</sub> + vec<sub>##ти</sub> + vec<sub>пароль</sub> + vec<sub>SEP</sub>) / 6<br>
+    <span style="color:#484f58">[PAD] токени ігноруються через attention_mask = 0</span><br><br>
+    <strong style="color:#c9d1d9">Чому mean, а не CLS?</strong> CLS-токен тренувався для класифікації (BERT), не для similarity.
+    Mean pooling збирає інформацію з УСІХ токенів — краще представляє зміст речення.
+  `;
+  container.appendChild(explain);
+}
+
+// ---- Batching animation ----
+const BATCH_DATA = [
+  { bs: 1, dps: 104 },
+  { bs: 8, dps: 379 },
+  { bs: 32, dps: 807 },
+  { bs: 64, dps: 945 },
+  { bs: 128, dps: 732 },
+];
+
+function animateBatching() {
+  document.getElementById('batchBtn').disabled = true;
+  const chart = document.getElementById('batchChart');
+  chart.innerHTML = '';
+  const maxDps = Math.max(...BATCH_DATA.map(d => d.dps));
+
+  BATCH_DATA.forEach((d, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'batch-bar-wrap';
+    const bar = document.createElement('div');
+    bar.className = 'batch-bar';
+    const color = d.dps === maxDps ? '#3fb950' : d.bs === 128 ? '#d29922' : '#58a6ff';
+    bar.style.background = color;
+    bar.style.height = '0px';
+    bar.textContent = d.dps;
+    wrap.appendChild(bar);
+    const label = document.createElement('div');
+    label.className = 'batch-label';
+    label.textContent = `batch=${d.bs}`;
+    wrap.appendChild(label);
+    chart.appendChild(wrap);
+
+    setTimeout(() => {
+      bar.style.height = (d.dps / maxDps * 140) + 'px';
+    }, 200 + i * 300);
+  });
+
+  setTimeout(() => {
+    const result = document.getElementById('batchResult');
+    result.innerHTML = `
+      <span style="color:#3fb950">Найкращий: batch=64 (945 docs/s)</span> —
+      <span style="color:#f85149">batch=1 (104 docs/s)</span> =
+      <strong style="color:#c9d1d9">9x різниця</strong><br>
+      <span style="color:#d29922">batch=128 повільніший за 64 — padding overhead для різної довжини тексту</span>
+    `;
+    document.getElementById('batchBtn').disabled = false;
+  }, 2000);
+}
+
+// Init
+doSearch();
+</script>
+</body>
+</html>

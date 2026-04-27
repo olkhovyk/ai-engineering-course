@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vLLM - Fast LLM Serving</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.3em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            font-size: 1.1em;
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        /* Section Styles */
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            animation: slideUp 0.6s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section h2 {
+            color: #2a5298;
+            font-size: 2em;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .section h3 {
+            color: #1e3c72;
+            font-size: 1.5em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        /* Feature Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .feature-card h4 {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feature-card p {
+            font-size: 0.95em;
+            opacity: 0.95;
+            line-height: 1.5;
+        }
+
+        /* Architecture Diagram */
+        .architecture {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        .arch-layer {
+            background: white;
+            border: 2px solid #2a5298;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .arch-layer::before {
+            content: '';
+            position: absolute;
+            left: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            background: #ffd700;
+            border-radius: 50%;
+            border: 3px solid #2a5298;
+        }
+
+        .arch-layer:first-child::before {
+            display: none;
+        }
+
+        .arch-layer h4 {
+            color: #2a5298;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .arch-layer p {
+            color: #555;
+            font-size: 0.95em;
+            margin-bottom: 8px;
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .comparison-table td {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .comparison-table tr:hover {
+            background: #e9ecef;
+        }
+
+        .metric-good {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .metric-bad {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        /* Use Cases */
+        .use-case {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .use-case h4 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .use-case p {
+            font-size: 0.95em;
+            opacity: 0.95;
+        }
+
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .stat-label {
+            font-size: 1em;
+            opacity: 0.9;
+            margin-top: 10px;
+        }
+
+        /* Code Block */
+        .code-block {
+            background: #1e3c72;
+            color: #ffd700;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 20px 0;
+            border-left: 4px solid #ffd700;
+        }
+
+        /* Comparison vs Ollama */
+        .vs-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .vs-item {
+            padding: 25px;
+            border-radius: 10px;
+        }
+
+        .vs-item.vllm {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .vs-item.ollama {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .vs-item h4 {
+            font-size: 1.4em;
+            margin-bottom: 15px;
+        }
+
+        .vs-item ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .vs-item li {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .vs-item li::before {
+            content: '✓';
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            padding: 30px;
+            opacity: 0.9;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .section {
+                padding: 20px;
+            }
+
+            .vs-box {
+                grid-template-columns: 1fr;
+            }
+
+            .comparison-table {
+                font-size: 0.85em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>⚡ vLLM</h1>
+            <p class="subtitle">Fast and Easy LLM Serving for Everyone</p>
+            <p class="tagline">Estado-of-the-art throughput для LLM inference</p>
+        </header>
+
+        <!-- What is vLLM -->
+        <div class="section">
+            <h2>❓ Що таке vLLM?</h2>
+            <p style="font-size: 1.1em; color: #555; margin-bottom: 20px; line-height: 1.8;">
+                vLLM — це швидка та легка бібліотека для LLM inference та serving. Розроблена в Sky Computing Lab UC Berkeley,
+                вона виросла в один з найактивніших open-source AI проектів із тисячами контрибюторів від академічних інститутів та компаній.
+            </p>
+
+            <h3>🎯 Основна ідея: PagedAttention</h3>
+            <p style="color: #555; margin-bottom: 20px; line-height: 1.6;">
+                vLLM використовує <strong>PagedAttention</strong> — революційну техніку ефективного керування пам'яттю для attention key-value.
+                Замість того щоб виділяти пам'ять блоками, vLLM використовує сторінки (як в операційній системі), що дозволяє:
+            </p>
+            <ul style="color: #555; margin-left: 20px; margin-bottom: 20px;">
+                <li>💾 <strong>Зменшити фрагментацію пам'яті</strong> — більше місця для вибірки</li>
+                <li>🚀 <strong>Continuous batching</strong> — обробляти запити разом без очікування</li>
+                <li>⚡ <strong>23x вищу пропускну здатність</strong> порівняно з традиційними методами</li>
+                <li>📉 <strong>Нижча latency</strong> — faster responses</li>
+            </ul>
+        </div>
+
+        <!-- Key Features -->
+        <div class="section">
+            <h2>⚙️ Ключові можливості vLLM</h2>
+
+            <h3>Швидкість</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>⚡ PagedAttention</h4>
+                    <p>Революційна техніка управління пам'яттю для attention</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🔄 Continuous Batching</h4>
+                    <p>Автоматичне группування запитів для максимальної пропускної здатності</p>
+                </div>
+                <div class="feature-card">
+                    <h4>📦 Chunked Prefill</h4>
+                    <p>Розділення великих запитів на меньші куски для швидшого обробки</p>
+                </div>
+                <div class="feature-card">
+                    <h4>💾 Prefix Caching</h4>
+                    <p>Кешування спільних префіксів для скорочення обчислень</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🎯 Speculative Decoding</h4>
+                    <p>n-gram, suffix, EAGLE, DFlash для прискорення генерації</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🔌 CUDA/HIP Graphs</h4>
+                    <p>Fast kernel execution з оптимізованими графами операцій</p>
+                </div>
+            </div>
+
+            <h3>Гнучкість</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>🤝 OpenAI API</h4>
+                    <p>Сумісний API сервер для легкої інтеграції</p>
+                </div>
+                <div class="feature-card">
+                    <h4>📊 200+ Моделей</h4>
+                    <p>LLMs, MoE, Multi-modal, Embedding, Reward models</p>
+                </div>
+                <div class="feature-card">
+                    <h4>⚙️ Quantization</h4>
+                    <p>FP8, INT8, INT4, GPTQ/AWQ, GGUF та більше</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🔀 Паралелізм</h4>
+                    <p>Tensor, pipeline, data, expert для розподіленого inference</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🎛️ Multi-LoRA</h4>
+                    <p>Ефективна підтримка LoRA для dense та MoE моделей</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🔗 Tool Calling</h4>
+                    <p>Estructурований output з xgrammar та tool calling</p>
+                </div>
+            </div>
+
+            <h3>Апаратне забезпечення</h3>
+            <p style="color: #555; margin-bottom: 15px;">Підтримує численні платформи:</p>
+            <ul style="color: #555; margin-left: 20px;">
+                <li><strong>GPUs:</strong> NVIDIA (CUDA), AMD (HIP), Intel Arc</li>
+                <li><strong>CPUs:</strong> x86, ARM, PowerPC</li>
+                <li><strong>Спеціальне ПЗ:</strong> Google TPUs, Intel Gaudi, Apple Silicon та інші</li>
+            </ul>
+        </div>
+
+        <!-- Architecture -->
+        <div class="section">
+            <h2>🏗️ Архітектура vLLM</h2>
+
+            <p style="color: #555; margin-bottom: 30px; font-size: 1.05em;">vLLM побудована з 6 основних шарів, кожен з яких має специфічну роль у системі:</p>
+
+            <div class="architecture" style="margin-left: 40px;">
+                <div class="arch-layer">
+                    <h4>📊 User API Layer</h4>
+                    <p><strong>Роль:</strong> Вхідна точка для клієнтів</p>
+                    <p><strong>Функції:</strong></p>
+                    <ul style="margin-left: 20px; color: #555; font-size: 0.9em;">
+                        <li><strong>OpenAI-compatible API</strong> — /v1/completions, /v1/chat/completions для прямої сумісності з OpenAI SDK</li>
+                        <li><strong>gRPC</strong> — high-performance RPC для внутрішніх сервісів</li>
+                        <li><strong>Anthropic Messages API</strong> — альтернативний API формат</li>
+                        <li>Парсинг запитів, валідація параметрів, error handling</li>
+                    </ul>
+                    <p style="margin-top: 10px; color: #667eea;"><strong>Приклад:</strong> POST /v1/completions { model: "mistral-7b", prompt: "...", max_tokens: 100 }</p>
+                </div>
+
+                <div class="arch-layer">
+                    <h4>🎯 Request Scheduler</h4>
+                    <p><strong>Роль:</strong> Оркестрація потоку запитів</p>
+                    <p><strong>Функції:</strong></p>
+                    <ul style="margin-left: 20px; color: #555; font-size: 0.9em;">
+                        <li><strong>Continuous Batching</strong> — автоматично комбінує новоприйшлі запити без очікування завершення попередніх</li>
+                        <li><strong>Request Prioritization</strong> — пріоритизація коротких запитів або VIP клієнтів</li>
+                        <li><strong>Load Balancing</strong> — розподіл навантаження між GPU</li>
+                        <li><strong>Adaptive Batching</strong> — динамічний розмір батчу залежно від довжини запитів</li>
+                    </ul>
+                    <p style="margin-top: 10px; color: #667eea;"><strong>Приклад:</strong> Замість чекати 5 запитів на завершення, начебто вже починаємо обробляти 5-й запит разом з обробкою 1-4</p>
+                </div>
+
+                <div class="arch-layer">
+                    <h4>⚡ PagedAttention Engine</h4>
+                    <p><strong>Роль:</strong> Революційне управління пам'яттю для attention</p>
+                    <p><strong>Функції:</strong></p>
+                    <ul style="margin-left: 20px; color: #555; font-size: 0.9em;">
+                        <li><strong>Paged Memory Management</strong> — замість монолітних блоків використовує «сторінки» (як OS), це зменшує фрагментацію пам'яті</li>
+                        <li><strong>KV Cache Optimization</strong> — ефективне кешування Key-Value пар для уникнення переобчислення</li>
+                        <li><strong>Token-wise KV Cache</strong> — зберігає KV для кожного токена окремо сторінками</li>
+                        <li><strong>Memory Sharing</strong> — коли батч містить схожі префікси (fork points), KV буферується один раз</li>
+                    </ul>
+                    <p style="margin-top: 10px; color: #667eea;"><strong>Приклад:</strong> замість 100MB для одного запиту, вмещаємо 10 запитів на 150MB разом завдяки паджингу та дедублікації</p>
+                </div>
+
+                <div class="arch-layer">
+                    <h4>🔌 Kernel Executors</h4>
+                    <p><strong>Роль:</strong> Оптимізовані обчислення для LLM операцій</p>
+                    <p><strong>Функції:</strong></p>
+                    <ul style="margin-left: 20px; color: #555; font-size: 0.9em;">
+                        <li><strong>FlashAttention</strong> — efficient attention algorithm з меньшою I/O</li>
+                        <li><strong>FlashInfer</strong> — розширена версія для inference з різними seq lengths</li>
+                        <li><strong>CUTLASS</strong> — оптимізовані GEMM (matrix multiply) kernels</li>
+                        <li><strong>torch.compile</strong> — AOT компіляція графів операцій</li>
+                        <li><strong>TRTLLM-GEN</strong> — TensorRT-LLM kernels для максимальної швидкості</li>
+                        <li><strong>MoE Kernels</strong> — спеціалізовані для Mixture-of-Experts архітектур</li>
+                    </ul>
+                    <p style="margin-top: 10px; color: #667eea;"><strong>Приклад:</strong> FlashAttention замість стандартного compute скорочує O(N²) пам'ять на O(N)</p>
+                </div>
+
+                <div class="arch-layer">
+                    <h4>💾 Memory Manager</h4>
+                    <p><strong>Роль:</strong> Управління виділенням та звільненням GPU пам'яті</p>
+                    <p><strong>Функції:</strong></p>
+                    <ul style="margin-left: 20px; color: #555; font-size: 0.9em;">
+                        <li><strong>Dynamic Allocation</strong> — виділяє пам'ять за потребою під час inference</li>
+                        <li><strong>Block Manager</strong> — управління фіксованими блоками (сторінками) пам'яті</li>
+                        <li><strong>KV Cache Management</strong> — track яка пам'ять використовується для якого батчу</li>
+                        <li><strong>Garbage Collection</strong> — звільнення пам'яті завершених запитів</li>
+                        <li><strong>Memory Reuse</strong> — переиспользування звільненої пам'яті без перевиділення</li>
+                        <li><strong>GPU Memory Utilization</strong> — коефіцієнт (0.0-1.0) для контролю скільки VRAM використовувати</li>
+                    </ul>
+                    <p style="margin-top: 10px; color: #667eea;"><strong>Приклад:</strong> GPU з 24GB VRAM при 0.9 утиліації використає ~21.6GB для KV cache, моделі ваг, та активацій</p>
+                </div>
+
+                <div class="arch-layer">
+                    <h4>🖥️ Hardware Backend</h4>
+                    <p><strong>Роль:</strong> Абстракція апаратного забезпечення</p>
+                    <p><strong>Функції:</strong></p>
+                    <ul style="margin-left: 20px; color: #555; font-size: 0.9em;">
+                        <li><strong>NVIDIA CUDA</strong> — оптимізовані kernels для NVIDIA GPUs (A100, H100, RTX)</li>
+                        <li><strong>AMD HIP</strong> — support для AMD MI300, MI250 та інших</li>
+                        <li><strong>CPU Kernels</strong> — fallback для x86, ARM, PowerPC CPUs</li>
+                        <li><strong>TPU Support</strong> — Google TPU v4, v5 (експериментально)</li>
+                        <li><strong>Intel Gaudi</strong> — Intel специалізовані AI chips</li>
+                        <li><strong>Plugin System</strong> — власні backends для нестандартного ПЗ</li>
+                    </ul>
+                    <p style="margin-top: 10px; color: #667eea;"><strong>Приклад:</strong> Один і той же vLLM код запускається на NVIDIA A100, AMD MI300, чи Apple Silicon без змін</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 40px; color: #1e3c72;">🔄 Потік даних через архітектуру</h3>
+            <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 8px; color: #555;">
+                <p style="margin-bottom: 10px;"><strong>1. User sends request</strong> → API Layer парсить JSON</p>
+                <p style="margin-bottom: 10px;"><strong>2. Scheduler обирає батч</strong> → вирішує які запити обробляти разом</p>
+                <p style="margin-bottom: 10px;"><strong>3. Memory Manager виділяє</strong> → KV cache для цього батчу</p>
+                <p style="margin-bottom: 10px;"><strong>4. PagedAttention Engine</strong> → обчислює attention за допомогою сторінок</p>
+                <p style="margin-bottom: 10px;"><strong>5. Kernel Executors</strong> → запускають оптимізовані операції (FlashAttention, GEMM)</p>
+                <p style="margin-bottom: 10px;"><strong>6. Hardware Backend</strong> → виконує операції на GPU/CPU/TPU</p>
+                <p><strong>7. Response sent back</strong> → токени, embedding, або інший output</p>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="section">
+            <h2>📈 Продуктивність</h2>
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-number">23x</div>
+                    <div class="stat-label">Вища пропускна здатність</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">50%</div>
+                    <div class="stat-label">Нижча p50 latency</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">200+</div>
+                    <div class="stat-label">Підтриманих моделей</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">2000+</div>
+                    <div class="stat-label">Контрибюторів</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- vLLM vs Ollama -->
+        <div class="section">
+            <h2>⚖️ vLLM vs Ollama</h2>
+
+            <div class="vs-box">
+                <div class="vs-item vllm">
+                    <h4>⚡ vLLM</h4>
+                    <ul>
+                        <li>Production-ready serving</li>
+                        <li>23x вища пропускна здатність</li>
+                        <li>Continuous batching</li>
+                        <li>OpenAI API сумісність</li>
+                        <li>Multi-GPU support</li>
+                        <li>Quantization (INT8, INT4, AWQ)</li>
+                        <li>Складніше налаштування</li>
+                        <li>Краще для серверів</li>
+                    </ul>
+                </div>
+
+                <div class="vs-item ollama">
+                    <h4>🦙 Ollama</h4>
+                    <ul>
+                        <li>Локальна розробка</li>
+                        <li>Простота — one command</li>
+                        <li>Менше налаштувань</li>
+                        <li>Вбудований UI</li>
+                        <li>Універсальна поддержка</li>
+                        <li>Меньше функцій</li>
+                        <li>Менша пропускна здатність</li>
+                        <li>Краще для локального тестування</li>
+                    </ul>
+                </div>
+            </div>
+
+            <p style="color: #555; margin-top: 30px; font-size: 1.05em; line-height: 1.6;">
+                <strong>Коли використовувати що:</strong><br>
+                • <strong>Ollama</strong> — розробка на своєму комп'ютері, prototипування, тестування моделей<br>
+                • <strong>vLLM</strong> — production deployment, API сервер для додатків, high-throughput сценарії
+            </p>
+        </div>
+
+        <!-- Use Cases -->
+        <div class="section">
+            <h2>💡 Типові сценарії використання</h2>
+
+            <div class="use-case">
+                <h4>🏢 Production API Server</h4>
+                <p>Запуск LLM API для веб-додатків з тисячами одночасних користувачів</p>
+            </div>
+
+            <div class="use-case">
+                <h4>🤖 AI Agents at Scale</h4>
+                <p>Deployment складних агентів з reasoning, tool calling, та planning</p>
+            </div>
+
+            <div class="use-case">
+                <h4>📊 Batch Processing</h4>
+                <p>Обробка великих об'ємів тексту з максимальною пропускною здатністю</p>
+            </div>
+
+            <div class="use-case">
+                <h4>🎯 Fine-tuned Model Serving</h4>
+                <p>Deployment fine-tuned моделей з LoRA для специфічних доменів</p>
+            </div>
+
+            <div class="use-case">
+                <h4>🌐 Multi-Model Serving</h4>
+                <p>Одночасне обслуговування численних моделей на одному сервері</p>
+            </div>
+
+            <div class="use-case">
+                <h4>⚡ Real-time Streaming</h4>
+                <p>Streaming responses для interactive додатків з low latency</p>
+            </div>
+        </div>
+
+        <!-- Deployment Options - Real World -->
+        <div class="section">
+            <h2>☁️ Де насправді деплоять vLLM? (AI Engineer Level)</h2>
+
+            <p style="color: #555; margin-bottom: 25px; font-size: 1.05em; line-height: 1.6;">
+                Коли ви виходите за межі свого ноутбука, vLLM стає основним вибором для трьох популярних сценаріїв:
+            </p>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>🚀 A. Хмарні GPU-хостинги</h4>
+                    <p><strong>Платформи:</strong> RunPod, Lambda Labs, Vast.ai, Crusoe</p>
+                    <p><strong>Ідея:</strong> Ви орендуєте одну або кілька GPU карток на годину</p>
+                    <p><strong>Як працює:</strong> Запускаєте Docker-контейнер з vLLM → він видає вам URL → працює як OpenAI API</p>
+                    <p><strong>Приклад:</strong></p>
+                    <div style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 5px; margin: 10px 0; font-family: monospace; font-size: 0.85em;">
+                        docker pull vllm/vllm-openai:latest<br>
+                        docker run --gpus all -p 8000:8000 \<br>
+                        &nbsp;&nbsp;vllm/vllm-openai:latest \<br>
+                        &nbsp;&nbsp;--model mistralai/Mistral-7B-v0.1
+                    </div>
+                    <p><strong>Ціна:</strong> $0.40–$4+ за годину (залежно від GPU)</p>
+                    <p><strong>RunPod A100:</strong> ~$0.67/год | H100: ~$2.49/год</p>
+                    <p><strong>Найкраще для:</strong> Стартапи, MVP, тестування в production-like умовах</p>
+                    <p><strong>Плюси:</strong> ✓ Гнучкість, ✓ Платиш скільки користуєшся, ✓ Швидкий старт</p>
+                    <p><strong>Мінуси:</strong> ✗ Холодний старт (30-60 сек), ✗ Дорого за 24/7, ✗ Залежиш від гостинга</p>
+                </div>
+
+                <div class="feature-card">
+                    <h4>⚡ B. Serverless GPU (True Pay-Per-Use)</h4>
+                    <p><strong>Платформи:</strong> Modal, Replicate, Beam, Baseten</p>
+                    <p><strong>Ідея:</strong> Ви не платите за оренду сервера 24/7, а тільки за **секунди, коли код реально працює**</p>
+                    <p><strong>Як працює:</strong> Ваш агент прокидається, запускає inference, платить лише за те час, потім "засинає"</p>
+                    <p><strong>Приклад (Modal):</strong></p>
+                    <div style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 5px; margin: 10px 0; font-family: monospace; font-size: 0.8em;">
+                        @app.function(gpu="A100")<br>
+                        def summarize_meeting(audio_file):<br>
+                        &nbsp;&nbsp;# vLLM стартує, робить inference, ланчує<br>
+                        &nbsp;&nbsp;response = vllm_client.complete(...)<br>
+                        &nbsp;&nbsp;return response
+                    </div>
+                    <p><strong>Ціна:</strong> Зазвичай дешевше RunPod через паралелізм</p>
+                    <p><strong>Найкраще для:</strong> Автоматизація (боти, агенти, які працюють не 24/7), eventos-driven системи</p>
+                    <p><strong>Плюси:</strong> ✓ Платиш тільки за робочий час, ✓ Auto-scaling out-of-box, ✓ Жодного DevOps</p>
+                    <p><strong>Мінуси:</strong> ✗ Cold start все ще 30-60 сек, ✗ Дорого за high-throughput, ✗ Vendor lock-in</p>
+                </div>
+
+                <div class="feature-card">
+                    <h4>🖥️ C. Bare Metal сервер (Приватність + Контроль)</h4>
+                    <p><strong>Платформи:</strong> Власний датацентр, private cloud, on-premise</p>
+                    <p><strong>Ідея:</strong> Велика компанія (банк, медицина) купує сервер з GPU і запускає vLLM безпосередньо</p>
+                    <p><strong>Конфігурація:</strong> Ubuntu Linux + NVIDIA/AMD драйвери + vLLM як бекенд для всієї компанії</p>
+                    <p><strong>Приклад (фінтех):</strong></p>
+                    <div style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 5px; margin: 10px 0; font-family: monospace; font-size: 0.8em;">
+                        # Bare metal: 8x A100 на Ubuntu 22.04<br>
+                        vllm serve meta-llama/Llama-2-70b-hf \<br>
+                        &nbsp;&nbsp;--tensor-parallel-size 8 \<br>
+                        &nbsp;&nbsp;--max-model-len 4096 \<br>
+                        &nbsp;&nbsp;--port 8000
+                    </div>
+                    <p><strong>Ціна:</strong> CapEx ~$200K (купівля) + OpEx ~$5K/місяць (електрика, охолодження)</p>
+                    <p><strong>Найкраще для:</strong> Банки, медицина, державні установи, великі корпорації</p>
+                    <p><strong>Плюси:</strong> ✓ Приватність 100%, ✓ No vendor lock-in, ✓ Низька latency (локально), ✓ Контроль</p>
+                    <p><strong>Мінуси:</strong> ✗ Великі стартові витрати, ✗ DevOps навички потрібні, ✗ Обслуговування складне</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px;">💰 Практичне порівняння вартості</h3>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Сценарій</th>
+                        <th>Платформа</th>
+                        <th>Вартість (на місяць)</th>
+                        <th>Затримка (Latency)</th>
+                        <th>DevOps Effort</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Локально (розробка)</strong></td>
+                        <td>MacBook M1 Pro + Ollama</td>
+                        <td>$0</td>
+                        <td>0ms</td>
+                        <td>Мінімальний</td>
+                    </tr>
+                    <tr>
+                        <td><strong>MVP / Прототип</strong></td>
+                        <td>RunPod (A100, 24/7)</td>
+                        <td>~$480 (0.67 × 730h)</td>
+                        <td>100-200ms</td>
+                        <td>Низький</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Агент (не 24/7)</strong></td>
+                        <td>Modal serverless</td>
+                        <td>~$50-200 (залежить від обсягу)</td>
+                        <td>200-500ms (cold start)</td>
+                        <td>Дуже низький</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Production API (high-throughput)</strong></td>
+                        <td>Bare metal 8x A100</td>
+                        <td>~$200K (CapEx) + $5K/месяц (OpEx)</td>
+                        <td>50-100ms</td>
+                        <td>Дуже високий</td>
+                    </tr>
+                    <tr>
+                        <td><strong>High-volume SaaS</strong></td>
+                        <td>RunPod (множествени GPU, auto-scaling)</td>
+                        <td>$5K-50K+ (залежно від трафіку)</td>
+                        <td>150-300ms</td>
+                        <td>Середній</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top: 30px;">🎯 Як вибрати в реальних проектах?</h3>
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 10px; margin: 20px 0;">
+                <p style="margin-bottom: 15px;">
+                    <strong>💡 Side project або навчання?</strong><br>
+                    → Локально на Ollama або HF Spaces (бесплатно)
+                </p>
+                <p style="margin-bottom: 15px;">
+                    <strong>🚀 Стартап з ліміт бюджетом?</strong><br>
+                    → RunPod A100 (~$500/місяць) для proof-of-concept, потім масштабуй
+                </p>
+                <p style="margin-bottom: 15px;">
+                    <strong>⚙️ Агент або bot (не постійно онлайн)?</strong><br>
+                    → Modal serverless — платиш тільки коли агент працює
+                </p>
+                <p style="margin-bottom: 15px;">
+                    <strong>🏢 Вже є користувачі?</strong><br>
+                    → RunPod з auto-scaling або Bare metal якщо великі обсяги
+                </p>
+                <p style="margin-bottom: 0;">
+                    <strong>🔒 Данні чутливі (банк, медицина)?</strong><br>
+                    → Тільки bare metal на приватному сервері
+                </p>
+            </div>
+
+            <h3 style="margin-top: 30px;">📊 Реальні приклади компаній</h3>
+            <ul style="color: #555; margin-left: 20px; font-size: 1.05em;">
+                <li><strong>Replicate:</strong> Вони використовують vLLM на GPU-хостингах для платформи, де користувачі можуть запускати моделі</li>
+                <li><strong>Modal:</strong> Заснована на концепції serverless GPU — vLLM часто deploy через них</li>
+                <li><strong>Anthropic (Claude):</strong> Використовує власний bare metal для production, але користується vLLM для тестування</li>
+                <li><strong>Stability AI:</strong> Запускає Stable Diffusion через vLLM на своїх GPUs</li>
+                <li><strong>Startups:</strong> Більшість стартапів починають з RunPod, потім переходять на bare metal коли $$ дозволяє</li>
+            </ul>
+        </div>
+
+        <!-- AWS Bedrock vs vLLM Decision Tree -->
+        <div class="section">
+            <h2>🎯 AWS Bedrock vs vLLM: Коли що обирати?</h2>
+
+            <p style="color: #555; margin-bottom: 20px; font-size: 1.05em;">
+                Два найпопулярніших способи робити LLM inference в production. Вибір залежить від ваших потреб.
+            </p>
+
+            <h3 style="color: #1e3c72; margin-bottom: 20px;">🟦 AWS Bedrock: Вибір для швидкості та Enterprise</h3>
+            <div style="background: linear-gradient(135deg, #FF9900 0%, #FF6600 100%); color: white; padding: 25px; border-radius: 10px; margin-bottom: 20px;">
+                <p style="margin-bottom: 15px;"><strong>Що це?</strong> Serverless API від AWS. Вам не потрібно думати про відеокарти, docker, драйвери.</p>
+                <p style="margin-bottom: 15px;"><strong>Як виглядає код:</strong></p>
+                <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 5px; font-family: monospace; font-size: 0.9em;">
+                    import boto3<br>
+                    client = boto3.client('bedrock-runtime')<br>
+                    response = client.invoke_model(<br>
+                    &nbsp;&nbsp;modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',<br>
+                    &nbsp;&nbsp;body=json.dumps({'messages': [...]})<br>
+                    )<br>
+                    <br>
+                    # Ви платите за токени. AWS масштабує сам.
+                </div>
+                <p style="margin-top: 15px;"><strong>Обирайте Bedrock, якщо:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>⏰ <strong>Time-to-Market понад усе</strong> — запустити продукт на вчора. Просто API call.</li>
+                    <li>📈 <strong>Масштабування — не ваша проблема</strong> — 100 користувачів сьогодні → 100K завтра, AWS сам виділить потужності</li>
+                    <li>🔗 <strong>Вже в екосистемі AWS</strong> — дані в S3, логіка в Lambda, Bedrock прямо інтегрується</li>
+                    <li>🔐 <strong>Потрібні закриті моделі</strong> — Claude 3.5 Sonnet, Llama 3.1 405B через API (не можна open-source)</li>
+                    <li>💼 <strong>Enterprise требует SLA</strong> — AWS гарантує uptime, compliance, monitoring</li>
+                </ul>
+                <p style="margin-top: 15px;"><strong>Вартість:</strong> ~$0.003 за 1K вхідних токенів (Claude 3.5 Sonnet)</p>
+            </div>
+
+            <h3 style="color: #1e3c72; margin-bottom: 20px;">⚡ vLLM: Вибір для контролю та економії</h3>
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 10px; margin-bottom: 20px;">
+                <p style="margin-bottom: 15px;"><strong>Що це?</strong> Двигун (engine), який ви ставите на свої GPU (або їх орендуєте)</p>
+                <p style="margin-bottom: 15px;"><strong>Як виглядає код:</strong></p>
+                <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 5px; font-family: monospace; font-size: 0.9em;">
+                    from openai import OpenAI<br>
+                    client = OpenAI(base_url="http://runpod-gpu:8000/v1", api_key="not-needed")<br>
+                    response = client.chat.completions.create(<br>
+                    &nbsp;&nbsp;model="mistralai/Mistral-7B-v0.1",<br>
+                    &nbsp;&nbsp;messages=[...],<br>
+                    &nbsp;&nbsp;temperature=0.7<br>
+                    )<br>
+                    <br>
+                    # Ви платите за орендовану GPU, не за токени
+                </div>
+                <p style="margin-top: 15px;"><strong>Обирайте vLLM, якщо:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>🔒 <strong>Максимальна приватність</strong> — дані не мають покидати ваш контур (Data Sovereignty, GDPR compliance)</li>
+                    <li>💰 <strong>Економіка на масштабі</strong> — мільйони запитів/день. vLLM на H100 (~$3K/місяць) дешевше, ніж платити за 1B токенів</li>
+                    <li>🎓 <strong>Fine-tuned моделі</strong> — ви навчили Llama розуміти юридичний сленг і хочете її обслуговувати</li>
+                    <li>⚙️ <strong>Контроль над всім</strong> — специфічні параметри PagedAttention, квантування, latency optimization</li>
+                    <li>💸 <strong>Бюджет — вторинний</strong> — вам не страшні 200K за сервер або DevOps</li>
+                </ul>
+                <p style="margin-top: 15px;"><strong>Вартість:</strong> ~$500/місяць (RunPod A100) до $5K+/місяць (Bare metal)</p>
+            </div>
+
+            <h3 style="margin-top: 30px;">📊 Порівняльна таблиця (Decision Matrix)</h3>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Критерій</th>
+                        <th>AWS Bedrock 🟦</th>
+                        <th>vLLM (Self-hosted) ⚡</th>
+                        <th>Що обирати?</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Складність налаштування</strong></td>
+                        <td><span class="metric-good">🟢 Низька</span> (просто API call)</td>
+                        <td><span class="metric-bad">🔴 Висока</span> (Docker, GPU drivers, K8s)</td>
+                        <td>Ви не DevOps → <strong>Bedrock</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Модель оплати</strong></td>
+                        <td>За токени (Pay-per-token)</td>
+                        <td>За оренду залізо (Per hour/month)</td>
+                        <td>Мало запитів → <strong>Bedrock</strong> | Мільйони → <strong>vLLM</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Вибір моделей</strong></td>
+                        <td>Claude, Llama, Titan, Mistral (через API)</td>
+                        <td>Будь-яка open-source з HuggingFace</td>
+                        <td>Потрібна Claude → <strong>Bedrock</strong> | Своя fine-tuned → <strong>vLLM</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Масштабування</strong></td>
+                        <td><span class="metric-good">🟢 Автоматичне</span> (AWS справляється)</td>
+                        <td><span class="metric-bad">🔴 Вручну</span> (K8s HPA, load balancer)</td>
+                        <td>Не хочете думати → <strong>Bedrock</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Latency</strong></td>
+                        <td>200-500ms (мережа AWS)</td>
+                        <td>50-100ms (локально на GPU)</td>
+                        <td>Real-time (<100ms) → <strong>vLLM</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Приватність</strong></td>
+                        <td>Хмарна (Trust AWS)</td>
+                        <td><span class="metric-good">🟢 Абсолютна</span> (Local/Private cloud)</td>
+                        <td>GDPR / банк / медицина → <strong>vLLM</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Гнучкість</strong></td>
+                        <td><span class="metric-bad">🔴 Обмежена</span> (тільки Bedrock параметри)</td>
+                        <td><span class="metric-good">🟢 Повна</span> (все можна змінити)</td>
+                        <td>Хочете експериментувати → <strong>vLLM</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Економіка (1M запитів/день)</strong></td>
+                        <td>~$20K-50K/месяц (залежно від модель)</td>
+                        <td>~$2K-5K/месяц (оренда GPU)</td>
+                        <td>Великий масштаб → <strong>vLLM</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top: 30px;">🚀 Чек-лист для вибору</h3>
+            <div style="background: #f8f9fa; border: 2px solid #667eea; border-radius: 10px; padding: 20px;">
+                <p style="margin-bottom: 20px; font-size: 1.05em; color: #333;"><strong>Виберіть AWS Bedrock, якщо ви відповіли ДА на більшість:</strong></p>
+                <ul style="color: #555; margin-left: 20px; margin-bottom: 20px;">
+                    <li>☑ Вам потрібна Claude 3.5 або інша closed-source модель?</li>
+                    <li>☑ У вас немає DevOps-инжнера на команді?</li>
+                    <li>☑ Сьогодні у вас <10K запитів на день?</li>
+                    <li>☑ Ви вже використовуєте AWS для інших сервісів?</li>
+                    <li>☑ Enterprise SLA важліше за ціну?</li>
+                </ul>
+
+                <p style="margin-bottom: 20px; font-size: 1.05em; color: #333;"><strong>Виберіть vLLM, якщо ви відповіли ДА на більшість:</strong></p>
+                <ul style="color: #555; margin-left: 20px;">
+                    <li>☑ Ваші дані чутливі (банк, медицина, GDPR)?</li>
+                    <li>☑ У вас більше 100K запитів на день?</li>
+                    <li>☑ У вас є хороший DevOps/SRE?</li>
+                    <li>☑ Вам треба контроль над параметрами inference?</li>
+                    <li>☑ Ви планували fine-tune модель?</li>
+                </ul>
+            </div>
+
+            <h3 style="margin-top: 30px;">💡 Реальні приклади</h3>
+            <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 8px;">
+                <p style="margin-bottom: 15px;">
+                    <strong>Стартап Y-Combinator з 10 користувачами</strong><br>
+                    → AWS Bedrock. Часу запустити продукт немає, дані не чутливі.
+                </p>
+                <p style="margin-bottom: 15px;">
+                    <strong>Фінтех стартап (PSD2 compliant)</strong><br>
+                    → vLLM на bare metal. GDPR + дані в Європі + своя fine-tuned модель.
+                </p>
+                <p style="margin-bottom: 15px;">
+                    <strong>B2B SaaS з 50K активних користувачів</strong><br>
+                    → vLLM на RunPod з auto-scaling. Дешевше Bedrock при такому масштабі.
+                </p>
+                <p>
+                    <strong>Корпоративний асистент у великій компанії</strong><br>
+                    → vLLM на bare metal в приватному датацентрі. Безпека > все.
+                </p>
+            </div>
+        </div>
+
+        <!-- Getting Started -->
+        <div class="section">
+            <h2>🚀 Швидкий старт</h2>
+
+            <h3>Встановлення</h3>
+            <div class="code-block">pip install vllm</div>
+
+            <h3>Запуск OpenAI-сумісного API сервера</h3>
+            <div class="code-block">vllm serve mistralai/Mistral-7B-Instruct-v0.1 \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --tensor-parallel-size 2</div>
+
+            <h3>Запуск з quantization (менше пам'яті)</h3>
+            <div class="code-block">vllm serve mistralai/Mistral-7B-v0.1 \
+    --quantization awq \
+    --gpu-memory-utilization 0.9</div>
+
+            <h3>Тестування API</h3>
+            <div class="code-block">curl http://localhost:8000/v1/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "mistralai/Mistral-7B-v0.1",
+    "prompt": "Що таке machine learning?",
+    "max_tokens": 100
+  }'</div>
+        </div>
+
+        <!-- Resources -->
+        <div class="section">
+            <h2>📚 Ресурси</h2>
+
+            <h3>Офіційні джерела</h3>
+            <ul style="color: #555; margin-left: 20px; font-size: 1.05em;">
+                <li><a href="https://docs.vllm.ai/" target="_blank" style="color: #2a5298; text-decoration: none; font-weight: bold;">📖 Документація vLLM</a></li>
+                <li><a href="https://github.com/vllm-project/vllm" target="_blank" style="color: #2a5298; text-decoration: none; font-weight: bold;">🐙 GitHub Repository</a></li>
+                <li><a href="https://arxiv.org/abs/2309.06180" target="_blank" style="color: #2a5298; text-decoration: none; font-weight: bold;">📄 Оригінальна paper (SOSP 2023)</a></li>
+            </ul>
+
+            <h3>Вивчити далі</h3>
+            <ul style="color: #555; margin-left: 20px; font-size: 1.05em; margin-top: 15px;">
+                <li>Continuous batching та як це добавляє 23x throughput</li>
+                <li>Детальна архітектура PagedAttention</li>
+                <li>Quantization методи (GPTQ, AWQ, INT8)</li>
+                <li>Distributed serving з tensor parallelism</li>
+                <li>Monitoring та benchmarking</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p>Made for LLM Engineering Lesson 6 | UC Berkeley Sky Computing Lab</p>
+        </footer>
+    </div>
+</body>
+</html>

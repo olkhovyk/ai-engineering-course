@@ -1,0 +1,6 @@
+resume_pipeline:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "../data/resume_analytics.duckdb"

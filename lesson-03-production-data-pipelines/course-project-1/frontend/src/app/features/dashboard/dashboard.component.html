@@ -1,0 +1,17 @@
+<div class="dashboard">
+  <app-summary-cards [summary]="summary"></app-summary-cards>
+
+  <div class="grid-60-40" style="margin-top: 16px">
+    <app-dock-panel [docks]="docks" [timeline]="timeline"></app-dock-panel>
+    <app-truck-queue [timeline]="timeline"></app-truck-queue>
+  </div>
+
+  <div class="card" style="margin-top: 16px">
+    <div class="tabs">
+      <div class="tab" [class.active]="activeTab === 'staff'" (click)="activeTab = 'staff'">Staff Status</div>
+      <div class="tab" [class.active]="activeTab === 'logs'" (click)="activeTab = 'logs'">Agent Log</div>
+    </div>
+    <app-staff-status *ngIf="activeTab === 'staff'" [staff]="staff"></app-staff-status>
+    <app-agent-log *ngIf="activeTab === 'logs'" [logs]="agentLogs"></app-agent-log>
+  </div>
+</div>

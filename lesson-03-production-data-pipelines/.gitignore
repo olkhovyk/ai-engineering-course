@@ -1,0 +1,13 @@
+.env
+__pycache__/
+*.pyc
+.claude/
+
+# dbt
+**/dbt_project/target/
+**/dbt_project/logs/
+**/dbt_project/.user.yml
+
+# generated data
+resume-pipeline/data/*.json
+resume-pipeline/data/*.duckdb
