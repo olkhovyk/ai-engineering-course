@@ -255,6 +255,98 @@ python src/plot.py --input results/results.csv --output results/
 docker compose down
 ```
 
+---
+
+## ✅ Команди для цього рішення
+
+Цей homework можна запускати прямо з папки `lesson-08-vector-databases-in-production/homework`.
+
+### 1. Встановити залежності
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 2. Підняти Qdrant і Postgres/pgvector
+
+```bash
+docker compose up -d
+docker compose ps
+```
+
+### 3. Завантажити датасет
+
+Повний датасет:
+
+```bash
+python src/load_data.py
+```
+
+Швидкий smoke-test на малому піднаборі:
+
+```bash
+python src/load_data.py --limit-docs 5000 --limit-queries 200
+```
+
+### 4. Згенерувати embeddings
+
+Для документів:
+
+```bash
+python src/embed.py --input data/corpus.jsonl --output data/corpus_embeddings.npy
+```
+
+Для queries:
+
+```bash
+python src/embed.py --input data/queries.jsonl --output data/query_embeddings.npy
+```
+
+Скрипт також створить:
+
+```text
+data/corpus_embeddings.ids.txt
+data/query_embeddings.ids.txt
+```
+
+### 5. Запустити benchmark
+
+Повний запуск усіх 5 БД:
+
+```bash
+python src/runner.py --output results/results.csv
+```
+
+Швидкий smoke-test:
+
+```bash
+python src/runner.py --max-docs 5000 --max-queries 100 --output results/results.csv
+```
+
+Запуск тільки FAISS:
+
+```bash
+python src/runner.py --dbs faiss_flat faiss_hnsw --max-docs 5000 --max-queries 100
+```
+
+### 6. Згенерувати графіки
+
+```bash
+python src/plot.py --input results/results.csv --output results
+```
+
+На виході:
+
+```text
+results/results.csv
+results/pareto_frontier.png
+results/latency_distribution.png
+results/disk_size_chart.png
+results/results_table.png
+```
+
 **`docker-compose.yml` у корені репо** має містити сервіси `qdrant` (image `qdrant/qdrant:latest`, порти 6333/6334) і `postgres` (image `pgvector/pgvector:pg16`, порт 5432, env `POSTGRES_USER=bench`, `POSTGRES_PASSWORD=bench`, `POSTGRES_DB=bench`). Готовий приклад — у [docker-compose.yml](docker-compose.yml).
 
 **`requirements.txt`** має включати: `numpy`, `sentence-transformers`, `torch`, `datasets`, `faiss-cpu`, `qdrant-client`, `chromadb`, `psycopg[binary]`, `pgvector`, `psutil`, `matplotlib`, `pandas`. Готовий список — у [requirements.txt](requirements.txt).
