@@ -1,0 +1,164 @@
+HYBRID:
+
+python experiment.py --retriever hybrid_bm25_dense_rrf --sizes 1000 10000 --output results/hybrid_test_weighted.csv
+Loaded corpus pool: 300107 docs
+Loaded eval set: 100 queries
+Loading embedding model: BAAI/bge-small-en-v1.5
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 199/199 [00:00<00:00, 9641.97it/s]
+
+=== hybrid_bm25_dense_rrf: 1000 docs ===
+Embedding documents...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01<00:00,  3.34it/s]
+Embedding queries...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 29.35it/s]
+Building BM25 index...
+Running hybrid BM25 + dense + RRF retrieval...
+  Recall@1: 0.93
+  Recall@10: 1.0
+  MRR@10: 0.9587
+  Latency p50: 0.934 ms
+  Latency p95: 1.840 ms
+  Latency p99: 2.407 ms
+
+=== hybrid_bm25_dense_rrf: 10000 docs ===
+Embedding documents...
+Batches: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 40/40 [00:10<00:00,  4.00it/s]
+Embedding queries...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 27.22it/s]
+Building BM25 index...
+Running hybrid BM25 + dense + RRF retrieval...
+  Recall@1: 0.85
+  Recall@10: 1.0
+  MRR@10: 0.9029
+  Latency p50: 12.092 ms
+  Latency p95: 25.845 ms
+  Latency p99: 35.594 ms
+
+
+FAISS HNSW:
+
+python experiment.py --retriever faiss_hnsw --sizes 1000 10000 100000 300000 --output results/hnsw_all.csv
+Loaded corpus pool: 300107 docs
+Loaded eval set: 100 queries
+Loading embedding model: BAAI/bge-small-en-v1.5
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 199/199 [00:00<00:00, 14910.62it/s]
+
+=== faiss_hnsw: 1000 docs ===
+Embedding documents...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01<00:00,  3.36it/s]
+Embedding queries...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 28.83it/s]
+Building FAISS HNSW index...
+Running FAISS HNSW retrieval...
+  Recall@1: 0.98
+  Recall@10: 1.0
+  MRR@10: 0.99
+  Latency p50: 0.072 ms
+  Latency p95: 0.089 ms
+  Latency p99: 0.114 ms
+
+=== faiss_hnsw: 10000 docs ===
+Embedding documents...
+Batches: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 40/40 [00:09<00:00,  4.01it/s]
+Embedding queries...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 30.16it/s]
+Building FAISS HNSW index...
+Running FAISS HNSW retrieval...
+  Recall@1: 0.97
+  Recall@10: 0.98
+  MRR@10: 0.9733
+  Latency p50: 0.154 ms
+  Latency p95: 0.188 ms
+  Latency p99: 0.215 ms
+
+=== faiss_hnsw: 100000 docs ===
+Embedding documents...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 391/391 [01:42<00:00,  3.80it/s]
+Embedding queries...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 29.36it/s]
+Building FAISS HNSW index...
+Running FAISS HNSW retrieval...
+  Recall@1: 0.88
+  Recall@10: 0.96
+  MRR@10: 0.9031
+  Latency p50: 0.419 ms
+  Latency p95: 0.577 ms
+  Latency p99: 0.645 ms
+
+=== faiss_hnsw: 300000 docs ===
+Embedding documents...
+Batches: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1172/1172 [06:21<00:00,  3.08it/s]
+Embedding queries...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 21.56it/s]
+Building FAISS HNSW index...
+Running FAISS HNSW retrieval...
+  Recall@1: 0.73
+  Recall@10: 0.89
+  MRR@10: 0.7898
+  Latency p50: 0.351 ms
+  Latency p95: 0.572 ms
+  Latency p99: 0.619 ms
+
+
+BRUTE FORCE:
+
+python experiment.py --sizes 1000 10000 100000 300000 --output results/baseline_all.csv
+Loaded corpus pool: 300107 docs
+Loaded eval set: 100 queries
+Loading embedding model: BAAI/bge-small-en-v1.5
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 199/199 [00:00<00:00, 9395.38it/s]
+
+=== Dense baseline: 1000 docs ===
+Embedding documents...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01<00:00,  3.00it/s]
+Embedding queries...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 24.22it/s]
+Running brute-force retrieval...
+  Recall@1: 0.98
+  Recall@10: 1.0
+  MRR@10: 0.99
+  Latency p50: 0.097 ms
+  Latency p95: 0.142 ms
+  Latency p99: 0.431 ms
+
+=== Dense baseline: 10000 docs ===
+Embedding documents...
+Batches: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 40/40 [00:10<00:00,  3.69it/s]
+Embedding queries...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 30.98it/s]
+Running brute-force retrieval...
+  Recall@1: 0.97
+  Recall@10: 0.98
+  MRR@10: 0.9733
+  Latency p50: 0.470 ms
+  Latency p95: 0.675 ms
+  Latency p99: 0.770 ms
+
+=== Dense baseline: 100000 docs ===
+Embedding documents...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 391/391 [01:50<00:00,  3.54it/s]
+Embedding queries...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 24.05it/s]
+Running brute-force retrieval...
+  Recall@1: 0.89
+  Recall@10: 0.97
+  MRR@10: 0.9127
+  Latency p50: 10.340 ms
+  Latency p95: 14.193 ms
+  Latency p99: 18.356 ms
+
+=== Dense baseline: 300000 docs ===
+Embedding documents...
+Batches: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1172/1172 [18:53<00:00,  1.03it/s]
+Embedding queries...
+Batches: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 12.82it/s]
+Running brute-force retrieval...
+  Recall@1: 0.76
+  Recall@10: 0.93
+  MRR@10: 0.8248
+  Latency p50: 18.151 ms
+  Latency p95: 22.105 ms
+  Latency p99: 24.739 ms

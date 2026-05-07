@@ -1,0 +1,14 @@
+# Шаблонні файли (data_loader, metrics) використовують тільки datasets.
+# Решту додавайте під свій стек: sentence-transformers, faiss-cpu,
+# qdrant-client, rank_bm25, openai, matplotlib тощо.
+--extra-index-url https://download.pytorch.org/whl/cu128
+
+datasets>=2.18
+torch==2.11.0+cu128
+sentence-transformers>=2.7
+faiss-cpu>=1.8
+numpy>=1.26
+pandas>=2.2
+matplotlib>=3.8
+psutil>=5.9
+rank-bm25>=0.2

@@ -1,0 +1,5 @@
+retriever,num_docs,num_queries,embedding_time_sec,embedding_throughput_docs_sec,recall_at_1,recall_at_10,mrr_at_10,latency_p50_ms,latency_p95_ms,latency_p99_ms
+faiss_hnsw,1000,100,1.197,835.23,0.98,1.0,0.99,0.072,0.089,0.114
+faiss_hnsw,10000,100,10.011,998.89,0.97,0.98,0.9733,0.154,0.188,0.215
+faiss_hnsw,100000,100,103.259,968.44,0.88,0.96,0.9031,0.419,0.577,0.645
+faiss_hnsw,300000,100,382.525,784.26,0.73,0.89,0.7898,0.351,0.572,0.619

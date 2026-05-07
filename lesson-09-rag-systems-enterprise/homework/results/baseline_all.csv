@@ -1,0 +1,5 @@
+retriever,num_docs,num_queries,embedding_time_sec,embedding_throughput_docs_sec,recall_at_1,recall_at_10,mrr_at_10,latency_p50_ms,latency_p95_ms,latency_p99_ms
+dense_bruteforce,1000,100,1.349,741.22,0.98,1.0,0.99,0.097,0.142,0.431
+dense_bruteforce,10000,100,10.947,913.47,0.97,0.98,0.9733,0.47,0.675,0.77
+dense_bruteforce,100000,100,111.306,898.43,0.89,0.97,0.9127,10.34,14.193,18.356
+dense_bruteforce,300000,100,1135.18,264.28,0.76,0.93,0.8248,18.151,22.105,24.739
