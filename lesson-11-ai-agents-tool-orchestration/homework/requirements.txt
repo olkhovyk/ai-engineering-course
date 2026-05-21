@@ -1,0 +1,7 @@
+pytest
+openai
+python-dotenv
+streamlit
+pandas
+langsmith
+langgraph

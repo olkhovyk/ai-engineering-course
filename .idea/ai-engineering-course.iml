@@ -4,6 +4,7 @@
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/lesson-08-vector-databases-in-production/homework/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lesson-10-api-layer-ai-systems/homework" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lesson-11-ai-agents-tool-orchestration/homework" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/lesson-02-data-engineering/homework/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/lesson-08-vector-databases-in-production/homework/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/lesson-09-rag-systems-enterprise/homework/.venv" />

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "coffee_last_week",
+    "question": "Скільки витратив на каву минулого тижня?",
+    "expected_intent": "category_spending",
+    "expected_tools": ["spending_for_category"]
+  },
+  {
+    "id": "top_categories",
+    "question": "Топ-5 категорій витрат",
+    "expected_intent": "top_categories",
+    "expected_tools": ["top_spending_categories"]
+  },
+  {
+    "id": "subscriptions",
+    "question": "На які підписки я витрачаюсь?",
+    "expected_intent": "subscriptions",
+    "expected_tools": ["subscriptions_summary"]
+  },
+  {
+    "id": "delivery_late_night",
+    "question": "Скільки витрачаю на доставку після 21:00?",
+    "expected_intent": "delivery",
+    "expected_tools": ["delivery_late_night_summary"]
+  },
+  {
+    "id": "cashflow_positive",
+    "question": "Чи буде баланс у плюс?",
+    "expected_intent": "cashflow",
+    "expected_tools": ["cashflow_for_period"]
+  },
+  {
+    "id": "savings",
+    "question": "Де можна зекономити цього місяця?",
+    "expected_intent": "savings",
+    "expected_tools": ["savings_opportunities"]
+  },
+  {
+    "id": "fraud_booking",
+    "question": "Я не робила транзакцію Booking.com",
+    "expected_intent": "fraud",
+    "expected_tools": ["suspicious_transactions"]
+  },
+  {
+    "id": "out_of_scope_stocks",
+    "question": "Купи мені акції Apple",
+    "expected_intent": "unknown",
+    "expected_tools": []
+  },
+  {
+    "id": "glovo_delivery",
+    "question": "Скільки витратив у Glovo?",
+    "expected_intent": "delivery",
+    "expected_tools": ["delivery_late_night_summary"]
+  },
+  {
+    "id": "netflix_subscription",
+    "question": "Дата останнього платежу за Netflix?",
+    "expected_intent": "subscriptions",
+    "expected_tools": ["subscriptions_summary"]
+  },
+  {
+    "id": "sportlife_subscription",
+    "question": "Чи є в мене підписка Sportlife?",
+    "expected_intent": "subscriptions",
+    "expected_tools": ["subscriptions_summary"]
+  },
+  {
+    "id": "reduce_delivery",
+    "question": "Якщо скоротити доставку, скільки можна зекономити?",
+    "expected_intent": "savings",
+    "expected_tools": ["savings_opportunities"]
+  },
+  {
+    "id": "month_minus",
+    "question": "Чи закрию місяць у мінус?",
+    "expected_intent": "cashflow",
+    "expected_tools": ["cashflow_for_period"]
+  },
+  {
+    "id": "coffee_ritual",
+    "question": "Скільки йде на каву?",
+    "expected_intent": "category_spending",
+    "expected_tools": ["spending_for_category"]
+  },
+  {
+    "id": "fraud_aliexpress",
+    "question": "Я не робив транзакцію AliExpress",
+    "expected_intent": "fraud",
+    "expected_tools": ["suspicious_transactions"]
+  },
+  {
+    "id": "show_categories",
+    "question": "Покажи категорії витрат",
+    "expected_intent": "top_categories",
+    "expected_tools": ["top_spending_categories"]
+  }
+]
