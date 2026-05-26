@@ -5,6 +5,11 @@
       <sourceFolder url="file://$MODULE_DIR$/lesson-08-vector-databases-in-production/homework/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lesson-10-api-layer-ai-systems/homework" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lesson-11-ai-agents-tool-orchestration/homework" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lesson-03-production-data-pipelines/course-project-1/backend" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lesson-04-ml-in-production/credit-scoring-demo" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lesson-10-api-layer-ai-systems/demo" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lesson-13-containers-for-ai/homework/boilerplate" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lesson-13-containers-for-ai/homework/submissions/illia_olkhovyk" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/lesson-02-data-engineering/homework/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/lesson-08-vector-databases-in-production/homework/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/lesson-09-rag-systems-enterprise/homework/.venv" />
