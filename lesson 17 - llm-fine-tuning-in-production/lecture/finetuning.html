@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LLM Fine-Tuning in Production — заняття 17</title>
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#15181d; --panel2:#1d2127; --line:#2a2f37;
+    --text:#e6e8ec; --muted:#9aa3ad;
+    --accent:#7cd1ff; --accent2:#ffd166; --accent3:#9be37c; --accent4:#c79bff; --accent5:#ff7eb6;
+    --warn:#ff7676; --ok:#9be37c;
+    --prompting:#7cd1ff; --rag:#ffd166; --ft:#ff7eb6;
+    --base:#5dade2; --adapter:#c79bff; --frozen:#5a6678;
+    --json:#f08862;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .wrap{max-width:1320px;margin:0 auto;padding:24px}
+  h1{font-size:30px;letter-spacing:.5px;margin:0 0 6px}
+  h1 small{color:var(--muted);font-weight:400;font-size:14px;display:block;margin-top:6px}
+  .sub{color:var(--muted);margin-bottom:24px;font-size:14px;line-height:1.6;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
+
+  section{margin:36px 0;padding:24px;background:var(--panel);border:1px solid var(--line);border-radius:14px;scroll-margin-top:20px}
+  section h2{font-size:20px;margin:0 0 8px;color:#fff;letter-spacing:.5px}
+  section h2 .num{color:var(--accent);font-weight:400}
+  section .lead{color:var(--muted);margin:0 0 18px;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;font-size:14px;line-height:1.6}
+  section h3{font-size:13px;margin:18px 0 8px;color:#fff;text-transform:uppercase;letter-spacing:1.2px}
+
+  .pad{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;line-height:1.65;color:#cdd5de}
+  .pad b{color:#fff}
+  .pad code{background:#11151a;border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--accent)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px}
+  @media(max-width:980px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .card h4{margin:0 0 8px;font-size:13px;color:#fff;letter-spacing:.5px}
+  .card p{margin:0;color:#cdd5de;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;font-size:13px}
+
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;font-size:13px}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;background:var(--panel2)}
+  td b{color:#fff}
+  td code{background:#11151a;border:1px solid var(--line);border-radius:3px;padding:1px 5px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--accent)}
+  td.yes{color:var(--ok)}
+  td.no{color:var(--warn)}
+  td.partial{color:var(--accent2)}
+
+  pre{background:#0a0c0f;border:1px solid var(--line);border-radius:8px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.5;color:#cdd5de;margin:8px 0}
+  pre .k{color:#ff7eb6}
+  pre .s{color:#9be37c}
+  pre .c{color:#6a737d;font-style:italic}
+  pre .n{color:#7cd1ff}
+  pre .f{color:#ffd166}
+
+  .btn{background:#26303b;color:#fff;border:1px solid #3a4654;border-radius:8px;padding:7px 14px;cursor:pointer;font:inherit;font-size:12px;font-weight:600;transition:all .15s}
+  .btn:hover{border-color:#57667a;background:#2d3845}
+  .btn.primary{background:var(--accent);color:#0b0d10;border-color:var(--accent)}
+  .btn.primary:hover{background:#a4dfff;border-color:#a4dfff}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-size:11px;color:var(--muted)}
+  .pill.ok{background:rgba(155,227,124,0.15);border-color:var(--ok);color:var(--ok)}
+  .pill.warn{background:rgba(255,118,118,0.15);border-color:var(--warn);color:var(--warn)}
+
+  .keypoint{padding:12px 14px;background:rgba(124,209,255,0.08);border:1px solid rgba(124,209,255,0.3);border-left:3px solid var(--accent);border-radius:8px;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;line-height:1.6;color:#cdd5de}
+  .keypoint b{color:#fff}
+
+  .checklist{list-style:none;padding:0;margin:0}
+  .checklist li{padding:9px 12px 9px 36px;margin:5px 0;background:var(--panel2);border:1px solid var(--line);border-radius:8px;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#cdd5de;position:relative}
+  .checklist li:before{content:"✓";position:absolute;left:12px;top:9px;color:var(--ok);font-weight:700}
+  .checklist li.warn:before{content:"⚠";color:var(--warn)}
+  .checklist li.no:before{content:"✗";color:var(--warn)}
+  .checklist li b{color:#fff}
+
+  /* === HERO: Three approaches selector === */
+  .heroBox{background:linear-gradient(135deg,#0d1620 0%,#11171f 100%);border:1px solid rgba(124,209,255,0.3);border-radius:14px;padding:20px;margin:0 0 18px;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+  .heroBox h3{margin:0 0 6px;color:#fff;font-size:14px;letter-spacing:.5px;text-transform:uppercase}
+  .heroBox .sub{margin:0 0 16px;color:var(--muted);font-size:13px;line-height:1.5}
+  .approachGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media(max-width:780px){.approachGrid{grid-template-columns:1fr}}
+  .approachCard{background:#0a0d12;border:2px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;transition:all .2s}
+  .approachCard:hover{transform:translateY(-2px)}
+  .approachCard.active.prompting{border-color:var(--prompting);box-shadow:0 0 20px rgba(124,209,255,.25)}
+  .approachCard.active.rag{border-color:var(--rag);box-shadow:0 0 20px rgba(255,209,102,.25)}
+  .approachCard.active.ft{border-color:var(--ft);box-shadow:0 0 20px rgba(255,126,182,.25)}
+  .approachCard h4{margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:.5px}
+  .approachCard.prompting h4{color:var(--prompting)}
+  .approachCard.rag h4{color:var(--rag)}
+  .approachCard.ft h4{color:var(--ft)}
+  .approachCard .meta{font-size:11px;color:var(--muted);font-family:ui-monospace,Menlo,monospace;margin-bottom:6px}
+  .approachCard p{margin:0;font-size:12px;color:#cdd5de;line-height:1.5}
+  .approachDetail{margin-top:14px;padding:14px;background:#0a0d12;border:1px solid var(--line);border-radius:10px;min-height:120px;font-size:13px;line-height:1.6;color:#cdd5de}
+  .approachDetail b{color:#fff}
+  .approachDetail .barRow{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:12px}
+  .approachDetail .barLbl{width:120px;color:var(--muted);font-family:ui-monospace,Menlo,monospace}
+  .approachDetail .barTrack{flex:1;height:14px;background:#11151a;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .approachDetail .barFill{height:100%;transition:width .5s}
+  .approachDetail .barFill.prompting{background:var(--prompting)}
+  .approachDetail .barFill.rag{background:var(--rag)}
+  .approachDetail .barFill.ft{background:var(--ft)}
+  .approachDetail .barNum{width:70px;color:#fff;font-family:ui-monospace,Menlo,monospace;font-weight:700}
+
+  /* === LoRA animation (Section 5) === */
+  .loraBox{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:18px;margin:14px 0;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+  .loraHead{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .loraHead h4{margin:0;color:#fff;font-size:13px;text-transform:uppercase;letter-spacing:.5px}
+  .loraStage{position:relative;background:#0e1318;border:1px solid var(--line);border-radius:10px;padding:24px 16px;min-height:280px}
+  .loraSvg{width:100%;height:auto}
+  .loraLegend{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:#cdd5de}
+  .loraLegend .swatch{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:middle}
+  .loraCaption{margin-top:12px;padding:12px 14px;background:#11151a;border:1px solid var(--line);border-radius:8px;min-height:50px;font-size:13px;line-height:1.6;color:#cdd5de}
+  .loraCaption .step{display:inline-block;background:var(--accent);color:#0b0d10;padding:2px 8px;border-radius:4px;font-weight:700;font-size:11px;margin-right:8px;text-transform:uppercase}
+  .loraCaption b{color:#fff}
+  .loraCaption code{background:#0a0d12;border:1px solid var(--line);border-radius:3px;padding:1px 5px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--accent)}
+
+  /* === Pipeline (Section 10) === */
+  .pipelineBox{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:18px;margin:14px 0}
+  .pipelineSteps{display:flex;gap:0;align-items:stretch;overflow-x:auto;padding-bottom:8px}
+  .pipelineStep{flex:0 0 200px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px;margin-right:10px;cursor:pointer;transition:all .2s;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+  .pipelineStep:hover{border-color:#57667a;transform:translateY(-2px)}
+  .pipelineStep.active{border-color:var(--accent);box-shadow:0 0 14px rgba(124,209,255,.3)}
+  .pipelineStep .stepNum{display:inline-block;background:var(--accent);color:#0b0d10;padding:2px 8px;border-radius:4px;font-weight:700;font-size:11px;font-family:ui-monospace,Menlo,monospace}
+  .pipelineStep h5{margin:8px 0 4px;color:#fff;font-size:13px}
+  .pipelineStep p{margin:0;color:#9aa3ad;font-size:11px;line-height:1.4}
+  .pipelineDetail{margin-top:14px;padding:14px;background:#11151a;border:1px solid var(--line);border-radius:8px;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;color:#cdd5de}
+  .pipelineDetail b{color:#fff}
+  .pipelineDetail code{background:#0a0d12;border:1px solid var(--line);border-radius:3px;padding:1px 5px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--accent)}
+  .pipelineDetail .danger{color:var(--warn);font-weight:700}
+
+  /* === Bias-variance flip visualization (Slide 5 supplement) === */
+  .biasViz{background:#0a0d12;border:1px solid var(--line);border-radius:10px;padding:14px;margin:10px 0;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+  .biasViz .scenarioGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+  @media(max-width:780px){.biasViz .scenarioGrid{grid-template-columns:1fr}}
+  .biasViz .scenario{background:#11151a;border:1px solid var(--line);border-radius:8px;padding:12px}
+  .biasViz .scenario h5{margin:0 0 8px;font-size:13px;color:#fff}
+  .biasViz .scenario.classical{border-left:3px solid var(--warn)}
+  .biasViz .scenario.modern{border-left:3px solid var(--ok)}
+  .biasViz .scenario p{margin:0;font-size:12px;color:#cdd5de;line-height:1.5}
+
+  .footer{margin-top:40px;padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;text-align:center;color:var(--muted);font-size:12px;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;line-height:1.6}
+  .footer b{color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>LLM Fine-Tuning in Production
+    <small>Заняття 17 · AI Engineering Course · коли API-промптів недостатньо</small>
+  </h1>
+  <p class="sub">Як донавчати моделі під свою задачу без власних GPU-кластерів та без десятків тисяч доларів на епоху. Урок про <b style="color:#fff">eval-driven engineering</b>, не про теорію градієнтів. До кінця: знатимете коли FT справді варто, як виміряти quality lift, і чому "велика модель + малий датасет" у 2026 — це <b style="color:#fff">не</b> overfit.</p>
+
+  <!-- ===================== HERO ===================== -->
+  <div class="heroBox">
+    <h3>🎯 Три рівні втручання у LLM — клікайте щоб порівняти</h3>
+    <div class="sub">Спочатку треба зрозуміти на якому рівні ваша задача. Fine-tuning — це <b>третій крок</b>, не перший. Більшість команд приходять до нього занадто рано.</div>
+    <div class="approachGrid">
+      <div class="approachCard active prompting" data-approach="prompting">
+        <h4>① Prompting</h4>
+        <div class="meta">$0 · setup 5 хв</div>
+        <p>Лише input змінюється. Системний промпт + few-shot examples. 90% задач вирішуються тут.</p>
+      </div>
+      <div class="approachCard rag" data-approach="rag">
+        <h4>② RAG</h4>
+        <div class="meta">$50-500/міс · setup 1-3 дні</div>
+        <p>Контекст з retrieval. Для актуальних/приватних даних які модель не знає.</p>
+      </div>
+      <div class="approachCard ft" data-approach="ft">
+        <h4>③ Fine-tuning</h4>
+        <div class="meta">$1-1000 · setup 3-30 днів</div>
+        <p>Ваги моделі змінюються. Для стилю, формату, доменної лексики.</p>
+      </div>
+    </div>
+    <div class="approachDetail" id="approachDetail"></div>
+  </div>
+
+  <!-- ============================ SECTION 1: TITLE / INTRO ============================ -->
+  <section id="intro">
+    <h2><span class="num">01 ·</span> Що таке fine-tuning і чому це інженерна задача</h2>
+    <p class="lead">Fine-tuning — це не магія і не data science. Це <b style="color:#fff">інженерна задача про дані, метрики і trade-offs</b>. Правильно зроблений FT економить тисячі доларів на місяць у проді; неправильно — згорає бюджет і дає гіршу якість за вихідний промпт. Завдання уроку — навчити вас приймати рішення про FT на числах, а не на хайпі.</p>
+
+    <h3>Дві характеристики mid-level engineer'а який працює з AI</h3>
+    <div class="grid2">
+      <div class="card">
+        <h4>🟢 Те що вміють усі</h4>
+        <p>Викликати API LLM. Обернути у HTTP-endpoint. Поставити Redis для кешу. <b>90% backend engineers</b> зупиняються тут.</p>
+      </div>
+      <div class="card">
+        <h4>🔵 Те що рідко хто вміє</h4>
+        <p>Натренувати власну модель + виміряти ROI + пояснити CTO коли FT варто vs RAG vs прoмптинг. <b>~5% engineers</b>. Це і є те, що ми вивчаємо.</p>
+      </div>
+    </div>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Головне правило уроку:</b> ML engineering у 2026 — це <b>80% data + 20% training</b>. Найважливіше у fine-tuning — не модель, не GPU і не гіперпараметри. Це <b>якість даних і eval set</b>.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 2: 3 APPROACHES ============================ -->
+  <section id="three-approaches">
+    <h2><span class="num">02 ·</span> Три підходи — коли що використовувати</h2>
+    <p class="lead">Найчастіша помилка команд що тільки почали з LLM — стрибнути на fine-tuning як перший крок. Правильний порядок: <b>prompting → RAG → fine-tuning</b>. Кожен наступний крок дорожчий і складніший, але вирішує клас проблем якого попередній не може.</p>
+
+    <table class="compare">
+      <tr><th>Підхід</th><th>Що змінюється</th><th>Коли застосовувати</th><th>Вартість</th></tr>
+      <tr>
+        <td><b style="color:var(--prompting)">Prompting</b></td>
+        <td>Лише input</td>
+        <td>Завдання вирішується через інструкції в системному промпті</td>
+        <td>$0 на adaptation</td>
+      </tr>
+      <tr>
+        <td><b style="color:var(--rag)">RAG</b></td>
+        <td>Контекст від retrieval</td>
+        <td>Потрібні актуальні/приватні дані, яких модель не знає</td>
+        <td>Дешево; складно по інфраструктурі</td>
+      </tr>
+      <tr>
+        <td><b style="color:var(--ft)">Fine-tuning</b></td>
+        <td>Ваги моделі</td>
+        <td>Стиль/формат відповіді, доменна лексика, складні patterns що не вміщаються у промпт</td>
+        <td>$100-$10K на тренування + inference</td>
+      </tr>
+    </table>
+
+    <h3>Decision tree — як вибрати правильний шлях</h3>
+    <ul class="checklist">
+      <li><b>Ваша задача описується чітким промптом + 3-5 прикладами?</b> → Prompting. Не йдіть далі.</li>
+      <li><b>Потрібні актуальні дані (новини, ваша внутрішня вікі, документи клієнтів)?</b> → RAG. FT тут не допоможе — він не дає "знання", він дає "поведінку".</li>
+      <li><b>Модель робить помилки які promprting не виправляє?</b> Спершу спробуйте кращий промпт, few-shot, structured outputs.</li>
+      <li><b>Виміряли baseline, спробували 3 варіанти промпту, нічого не дало нормальної якості?</b> → Тільки тоді fine-tuning.</li>
+    </ul>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Правило вибору:</b> спершу prompting → RAG → fine-tuning. Не навпаки. Fine-tuning — це коли перші два не дають потрібної якості, і у вас є <b>≥500 якісних training прикладів</b>.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 3: WHAT IS FT TECHNICALLY ============================ -->
+  <section id="technical">
+    <h2><span class="num">03 ·</span> Що таке fine-tuning технічно — три типи</h2>
+    <p class="lead">Fine-tuning — це <b style="color:#fff">продовження тренування pre-trained моделі</b> на вашому датасеті з малим learning rate. Pre-trained model вже бачила трильйони токенів. Fine-tuning донавчає її на 1K-100K прикладах вашої специфічної задачі.</p>
+
+    <h3>Три типи fine-tuning у production</h3>
+    <div class="grid3">
+      <div class="card">
+        <h4>📚 Continued pre-training</h4>
+        <p>На <b>сирому тексті</b> домена (юр-документи, медичні картки, ваш кодбейс). Модель вчиться <b>лексики</b> і <b>стилю</b>. Дорого: 100K+ прикладів, full weights.</p>
+      </div>
+      <div class="card">
+        <h4>🎯 Supervised fine-tuning (SFT)</h4>
+        <p>На парах <code>(prompt, ideal_response)</code>. Модель вчиться <b>формату</b> відповідей. <b>У 95% production-кейсів — це те що вам треба.</b></p>
+      </div>
+      <div class="card">
+        <h4>🏆 Preference tuning (RLHF / DPO)</h4>
+        <p>На парах <code>(chosen, rejected)</code>. Модель вчиться <b>які відповіді кращі</b>. Research-level, дорого.</p>
+      </div>
+    </div>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>У 2026 для AI engineer у проді — це майже завжди SFT.</b> Continued pre-training — це research labs. RLHF/DPO — це OpenAI/Anthropic які роблять frontier models. Ваша робота — SFT з якісним датасетом.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 4: TRANSFER LEARNING ============================ -->
+  <section id="transfer">
+    <h2><span class="num">04 ·</span> Fine-tuning = Transfer Learning — це той самий концепт</h2>
+    <p class="lead">Якщо ви бачили "transfer learning" у попередніх ML-курсах — це <b style="color:#fff">той самий підхід</b>, що сучасний fine-tuning. Просто інша назва з іншої епохи.</p>
+
+    <div class="grid2">
+      <div class="card" style="border-left:3px solid var(--accent2)">
+        <h4>👴 Класичний transfer learning (2014-2020)</h4>
+        <p>Брали <b>ImageNet-pretrained ResNet</b>. Заморожували нижні шари (feature extractor). Тренували лише останні classification-шари на своєму датасеті фотографій котиків.</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--accent)">
+        <h4>🆕 Сучасний LLM fine-tuning (2023+)</h4>
+        <p>Беремо <b>pre-trained Llama / GPT / Mistral</b>. Заморожуємо base weights (через LoRA — далі). Тренуємо невеликі адаптери на доменному датасеті.</p>
+      </div>
+    </div>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Ключова ідея в обох випадках одна:</b> не вчити модель з нуля, а <b>перенести знання</b> з general domain (ImageNet / web text) у спеціалізований (медицина / юриспруденція / ваш код).
+    </div>
+
+    <h3>Чому термін змінився</h3>
+    <p class="pad">У CV transfer learning означав заміну classification head. У LLM ми переймаємо <b>всю generative-здатність</b> і донавчаємо <b>стилю/формату відповідей</b>. Це той самий принцип, але інший шар моделі модифікується. У 2026 кажуть "fine-tuning" — це правильна назва для роботи з LLM.</p>
+  </section>
+
+  <!-- ============================ SECTION 5: PEFT / LoRA ============================ -->
+  <section id="peft">
+    <h2><span class="num">05 ·</span> PEFT і LoRA — чому ми не тренуємо всі ваги</h2>
+    <p class="lead">Full fine-tuning <b>70B моделі</b> вимагає ~1.5TB GPU RAM. Це <b>20 × H100 = $40K на місяць оренди</b>. Тому з 2023 року стандарт — <b style="color:#fff">Parameter-Efficient Fine-Tuning (PEFT)</b>.</p>
+
+    <div class="loraBox">
+      <div class="loraHead"><h4>🦥 LoRA: тренуємо адаптери замість всієї моделі</h4></div>
+      <div class="loraStage">
+        <svg class="loraSvg" viewBox="0 0 800 280" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="arr1" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="var(--accent)"/>
+            </marker>
+          </defs>
+          <!-- Base model box (frozen) -->
+          <rect x="60" y="60" width="280" height="160" fill="#15181d" stroke="var(--frozen)" stroke-width="2" stroke-dasharray="6 3" rx="10"/>
+          <text x="200" y="44" text-anchor="middle" fill="#cdd5de" font-family="ui-monospace" font-size="12" font-weight="700">FROZEN base weights</text>
+          <text x="200" y="100" text-anchor="middle" fill="#fff" font-family="ui-monospace" font-size="14" font-weight="700">Llama 3.1 8B</text>
+          <text x="200" y="125" text-anchor="middle" fill="var(--muted)" font-family="ui-monospace" font-size="11">8,030,261,248 parameters</text>
+          <text x="200" y="155" text-anchor="middle" fill="var(--warn)" font-family="ui-monospace" font-size="11">❄ заморожені, не тренуються</text>
+          <text x="200" y="190" text-anchor="middle" fill="var(--muted)" font-family="ui-monospace" font-size="11">завантажені у 4-bit (QLoRA)</text>
+          <text x="200" y="210" text-anchor="middle" fill="var(--muted)" font-family="ui-monospace" font-size="11">~6 GB VRAM</text>
+
+          <!-- LoRA adapter box (trainable) -->
+          <rect x="460" y="60" width="280" height="160" fill="#1a1320" stroke="var(--adapter)" stroke-width="2" rx="10"/>
+          <text x="600" y="44" text-anchor="middle" fill="var(--adapter)" font-family="ui-monospace" font-size="12" font-weight="700">TRAINABLE LoRA adapter</text>
+          <text x="600" y="100" text-anchor="middle" fill="#fff" font-family="ui-monospace" font-size="14" font-weight="700">A × B матриці</text>
+          <text x="600" y="125" text-anchor="middle" fill="var(--adapter)" font-family="ui-monospace" font-size="11">~10-50 млн params (0.1-0.6%)</text>
+          <text x="600" y="155" text-anchor="middle" fill="var(--ok)" font-family="ui-monospace" font-size="11">🔥 тренуємо тільки це</text>
+          <text x="600" y="190" text-anchor="middle" fill="var(--muted)" font-family="ui-monospace" font-size="11">r=16, alpha=32</text>
+          <text x="600" y="210" text-anchor="middle" fill="var(--muted)" font-family="ui-monospace" font-size="11">~50-200 MB на диску</text>
+
+          <!-- Arrow + add -->
+          <line x1="340" y1="140" x2="460" y2="140" stroke="var(--accent)" stroke-width="2" marker-end="url(#arr1)"/>
+          <text x="400" y="130" text-anchor="middle" fill="var(--accent)" font-family="ui-monospace" font-size="14" font-weight="700">+</text>
+        </svg>
+      </div>
+      <div class="loraLegend">
+        <span><span class="swatch" style="background:var(--frozen)"></span>Frozen base (8B params, не змінюємо)</span>
+        <span><span class="swatch" style="background:var(--adapter)"></span>Trainable LoRA adapter (~10M params)</span>
+      </div>
+      <div class="loraCaption">
+        <span class="step">КЛЮЧОВЕ</span> Замість тренування 8 мільярдів параметрів — тренуємо <b>~10 мільйонів (0.1%)</b>. Це і є відповідь на питання "чи не переобучить велику модель малий датасет?" — <b>ми не тренуємо велику модель</b>. Тренуємо лише маленький адаптер поверх неї.
+      </div>
+    </div>
+
+    <h3>Чотири варіанти PEFT у 2026</h3>
+    <div class="grid4">
+      <div class="card">
+        <h4>🅛 LoRA <span class="pill" style="font-size:9px;padding:1px 6px;margin-left:4px">2021</span></h4>
+        <p>2 матриці-адаптери поверх attention-шарів. Замість 8B params навчаємо ~10M. <b>Industry standard.</b></p>
+      </div>
+      <div class="card">
+        <h4>🅠 QLoRA <span class="pill" style="font-size:9px;padding:1px 6px;margin-left:4px">2023</span></h4>
+        <p>LoRA + base model квантована у 4-bit. Економить ~4× VRAM. Можна тренувати 8B на Colab T4 (15 GB).</p>
+      </div>
+      <div class="card" style="border-color:rgba(155,227,124,0.4);background:rgba(155,227,124,0.05)">
+        <h4 style="color:var(--ok)">🅓 DoRA <span class="pill ok" style="font-size:9px;padding:1px 6px;margin-left:4px">2024 NVIDIA</span></h4>
+        <p>Weight-Decomposed LoRA. Розкладає update на <b>magnitude + direction</b>. <b>+3-5% accuracy</b> над LoRA при тих самих params.</p>
+      </div>
+      <div class="card">
+        <h4>🅐 Adapters / Prefix Tuning <span class="pill" style="font-size:9px;padding:1px 6px;margin-left:4px">2019</span></h4>
+        <p>Варіації LoRA. Рідше використовуються у проді — LoRA сімейство "виграло".</p>
+      </div>
+    </div>
+
+    <h3>🅓 DoRA — Weight-Decomposed Low-Rank Adaptation</h3>
+    <p class="pad" style="margin-bottom:12px"><b>DoRA</b> опублікована NVIDIA Research у лютому 2024 (<code>arXiv:2402.09353</code>), у production-фреймворках з 2025. Інтегрована у <b>PEFT library</b> (HuggingFace), <b>Unsloth</b>, <b>Axolotl</b>. <b>Ідея:</b> класична LoRA додає одну матрицю-update <code>ΔW = B × A</code>. DoRA розкладає кожен weight vector на <b>magnitude (длина)</b> та <b>direction (напрямок)</b>, і тренує їх окремо.</p>
+
+    <div class="loraBox">
+      <div class="loraHead"><h4>🔬 DoRA: magnitude vs direction decomposition</h4></div>
+      <div class="loraStage">
+        <svg class="loraSvg" viewBox="0 0 800 280" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="arrDora" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="var(--ok)"/>
+            </marker>
+          </defs>
+          <!-- LoRA box (left) -->
+          <rect x="40" y="50" width="320" height="180" fill="#15181d" stroke="var(--adapter)" stroke-width="2" rx="10"/>
+          <text x="200" y="34" text-anchor="middle" fill="var(--adapter)" font-family="ui-monospace" font-size="12" font-weight="700">LoRA (класична)</text>
+          <text x="200" y="80" text-anchor="middle" fill="#fff" font-family="ui-monospace" font-size="14" font-weight="700">W' = W + B × A</text>
+          <text x="200" y="115" text-anchor="middle" fill="var(--muted)" font-family="ui-monospace" font-size="11">Один update — змішує</text>
+          <text x="200" y="135" text-anchor="middle" fill="var(--muted)" font-family="ui-monospace" font-size="11">і magnitude, і direction</text>
+          <line x1="100" y1="170" x2="300" y2="170" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3"/>
+          <text x="200" y="195" text-anchor="middle" fill="var(--warn)" font-family="ui-monospace" font-size="11">⚠ Менш виразна для</text>
+          <text x="200" y="212" text-anchor="middle" fill="var(--warn)" font-family="ui-monospace" font-size="11">складних patterns</text>
+
+          <!-- DoRA box (right) -->
+          <rect x="440" y="50" width="320" height="180" fill="#0e1f0f" stroke="var(--ok)" stroke-width="2" rx="10"/>
+          <text x="600" y="34" text-anchor="middle" fill="var(--ok)" font-family="ui-monospace" font-size="12" font-weight="700">DoRA (нова)</text>
+          <text x="600" y="80" text-anchor="middle" fill="#fff" font-family="ui-monospace" font-size="14" font-weight="700">W' = m × (V + ΔV) / ||V + ΔV||</text>
+          <text x="600" y="115" text-anchor="middle" fill="var(--ok)" font-family="ui-monospace" font-size="11">m: magnitude (тренується)</text>
+          <text x="600" y="135" text-anchor="middle" fill="var(--ok)" font-family="ui-monospace" font-size="11">ΔV: direction update (LoRA-style)</text>
+          <line x1="500" y1="170" x2="700" y2="170" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3"/>
+          <text x="600" y="195" text-anchor="middle" fill="var(--ok)" font-family="ui-monospace" font-size="11">✓ Окремий контроль</text>
+          <text x="600" y="212" text-anchor="middle" fill="var(--ok)" font-family="ui-monospace" font-size="11">над довжиною і кутом</text>
+
+          <!-- Arrow between -->
+          <line x1="370" y1="140" x2="430" y2="140" stroke="var(--ok)" stroke-width="2" marker-end="url(#arrDora)"/>
+          <text x="400" y="130" text-anchor="middle" fill="var(--ok)" font-family="ui-monospace" font-size="12" font-weight="700">eval</text>
+        </svg>
+      </div>
+      <div class="loraCaption">
+        <span class="step" style="background:var(--ok);color:#0b0d10">DoRA</span> Ключова інсайт: під час full fine-tuning ваги змінюються <b>несиметрично</b> у magnitude vs direction. LoRA не може відтворити цей патерн (один update міксує обидва). DoRA розкладає оновлення на дві окремі траєкторії — <b>результат ближчий до full FT</b> при тій самій кількості trainable parameters.
+      </div>
+    </div>
+
+    <h3>LoRA vs DoRA — що показують benchmarks</h3>
+    <table>
+      <tr><th>Метрика</th><th>LoRA r=16</th><th>DoRA r=16</th><th>Різниця</th></tr>
+      <tr><td>Commonsense reasoning (Llama 3 8B)</td><td>74.2%</td><td><b style="color:var(--ok)">77.5%</b></td><td><b style="color:var(--ok)">+3.3pp</b></td></tr>
+      <tr><td>Image/Video classification (LLaVA)</td><td>67.8%</td><td><b style="color:var(--ok)">71.1%</b></td><td><b style="color:var(--ok)">+3.3pp</b></td></tr>
+      <tr><td>Trainable params</td><td>~10M</td><td>~10.3M</td><td>+3% (magnitude vector)</td></tr>
+      <tr><td>VRAM during training</td><td>~7 GB</td><td>~7.2 GB</td><td>+200 MB (ignorable)</td></tr>
+      <tr><td>Training time per epoch</td><td>~20 хв</td><td>~22 хв</td><td>+10% (decomposition overhead)</td></tr>
+      <tr><td>Inference latency</td><td>0 (merged)</td><td>0 (merged)</td><td>—</td></tr>
+    </table>
+
+    <div class="keypoint" style="margin-top:14px;border-left-color:var(--ok);background:rgba(155,227,124,0.08);border-color:rgba(155,227,124,0.3)">
+      <b style="color:var(--ok)">Коли вибирати DoRA замість LoRA:</b> якщо вам критичні <b>останні 3-5% якості</b> (high-stakes domain: medical, legal, financial), і ви можете дозволити <b>+10% training time</b>. <b>Коли LoRA достатньо:</b> більшість structured tasks (extraction, classification, summarization) — там навіть baseline LoRA близько до ceiling, DoRA дає мінімальний lift. <b>DoRA — це quality optimization, не cost optimization.</b>
+    </div>
+
+    <h3>Як використати DoRA у вашому коді</h3>
+    <pre><span class="c"># PEFT library (HuggingFace) — одна зміна параметра</span>
+<span class="k">from</span> peft <span class="k">import</span> LoraConfig
+
+config = LoraConfig(
+    r=<span class="n">16</span>, lora_alpha=<span class="n">32</span>,
+    target_modules=[<span class="s">"q_proj"</span>, <span class="s">"k_proj"</span>, <span class="s">"v_proj"</span>, <span class="s">"o_proj"</span>],
+    use_dora=<span class="k">True</span>,                  <span class="c"># ← єдина зміна. Решта identical to LoRA</span>
+)</pre>
+    <p class="pad" style="margin-top:8px"><b>Це і все</b> — DoRA активується одним прапорцем. Не треба переписувати training loop. Unsloth, Axolotl, LLaMA-Factory підтримують аналогічно.</p>
+
+    <div class="biasViz">
+      <h4 style="margin:0 0 4px;color:#fff;font-size:13px">🧠 Counter-intuition: чому велика модель + малий датасет ≠ overfit</h4>
+      <div class="scenarioGrid">
+        <div class="scenario classical">
+          <h5>❌ Класичний ML (CV, 2010-х)</h5>
+          <p>ResNet-152 на 500 фото → overfit, бо <b>тренуємо всі ваги</b>. Класичний bias-variance tradeoff: модель ємніша за дані → запам'ятовує.</p>
+        </div>
+        <div class="scenario modern">
+          <h5>✅ Сучасний LLM (LoRA, 2024+)</h5>
+          <p>Llama 8B + LoRA на 500 прикладах → <b>не</b> overfit, бо тренуємо лише <b>0.1% параметрів</b>. Адаптер крихітний, для нього 500 прикладів — нормальний обсяг.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>На практиці у 2026:</b> 99% production-fine-tuning — це <b>QLoRA</b>. Якість майже як у full fine-tuning, вартість у 10-100× нижча. Студенти на цьому уроці робитимуть саме QLoRA.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 6: DATASET ============================ -->
+  <section id="dataset">
+    <h2><span class="num">06 ·</span> Anatomy of training dataset — найважливіша частина</h2>
+    <p class="lead">Найважливіше у fine-tuning — <b style="color:#fff">не модель і не GPU. Це датасет</b>. 80% часу проекту з FT йде на роботу з даними, а не на тренування.</p>
+
+    <h3>Структура SFT-датасету для chat-моделей</h3>
+    <pre><span class="c">// jsonl — один рядок на приклад</span>
+{<span class="k">"messages"</span>: [
+  {<span class="k">"role"</span>: <span class="s">"system"</span>, <span class="k">"content"</span>: <span class="s">"You extract structured data..."</span>},
+  {<span class="k">"role"</span>: <span class="s">"user"</span>, <span class="k">"content"</span>: <span class="s">"Hi, I want to cancel my Pro Plan. — John"</span>},
+  {<span class="k">"role"</span>: <span class="s">"assistant"</span>, <span class="k">"content"</span>: <span class="s">'{"customer_name":"John","product":"Pro Plan",...}'</span>}
+]}</pre>
+
+    <h3>Ключові метрики якості датасету</h3>
+    <ul class="checklist">
+      <li><b>Кількість.</b> Мінімум 500-1000 прикладів для відчутного ефекту. Sweet spot — <b>5K-50K</b>. Менше 200 — швидше зробіть кращий промпт.</li>
+      <li><b>Різноманітність.</b> Покриває edge cases, не лише happy path. Тестуйте на anonymous emails, multiple issues, sarcasm, mixed languages.</li>
+      <li><b>Чистота.</b> Одна помилкова відповідь у датасеті = модель її повторює. <b>Garbage in → garbage out</b>.</li>
+      <li><b>Версіонування.</b> Датасет у git/DVC. Кожна модель прив'язана до конкретної версії датасету.</li>
+      <li><b>Hash-check overlap з eval set.</b> Якщо eval-приклад потрапив у train — метрики стають брехнею.</li>
+    </ul>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Інженерне правило:</b> якщо у вас немає 500+ якісних прикладів — <b>спершу зберіть дані</b>, потім думайте про FT. Не навпаки. Згенерувати синтетично через GPT-4 можна, але треба переглянути 30-50 прикладів руками щоб переконатись що не junk.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 7: HYPERPARAMETERS ============================ -->
+  <section id="hyperparams">
+    <h2><span class="num">07 ·</span> Hyperparameters — рецепт що працює у 95% випадків</h2>
+    <p class="lead">На відміну від класичного ML, у QLoRA fine-tuning гіперпараметри <b style="color:#fff">майже стандартизовані</b>. Не треба grid search — є робочі дефолти.</p>
+
+    <h3>Базовий рецепт для SFT з QLoRA (Llama 3.x / Mistral 7B-70B)</h3>
+    <pre><span class="c"># TrainingArguments</span>
+learning_rate=<span class="n">2e-5</span>,              <span class="c"># стандарт для LoRA: 1e-4 до 2e-5</span>
+per_device_train_batch_size=<span class="n">8</span>,   <span class="c"># макс що влізе у VRAM</span>
+gradient_accumulation_steps=<span class="n">4</span>,   <span class="c"># ефективний batch = 32</span>
+num_train_epochs=<span class="n">3</span>,              <span class="c"># 1-3; більше → overfitting</span>
+warmup_ratio=<span class="n">0.03</span>,               <span class="c"># 3% steps на warmup</span>
+lr_scheduler_type=<span class="s">"cosine"</span>,      <span class="c"># cosine decay після warmup</span>
+bf16=<span class="k">True</span>,                       <span class="c"># bfloat16 на H100 / A100</span>
+
+<span class="c"># LoraConfig</span>
+r=<span class="n">16</span>,                <span class="c"># rank — 8/16/32; більше = ємніший адаптер</span>
+lora_alpha=<span class="n">32</span>,       <span class="c"># scaling; правило: alpha = 2 × r</span>
+lora_dropout=<span class="n">0.05</span>,
+target_modules=[<span class="s">"q_proj"</span>, <span class="s">"k_proj"</span>, <span class="s">"v_proj"</span>, <span class="s">"o_proj"</span>],</pre>
+
+    <h3>Коли крутити параметри</h3>
+    <table>
+      <tr><th>Симптом</th><th>Виправлення</th></tr>
+      <tr><td>LR закнизький → loss не падає</td><td>Підняти до <code>5e-5</code></td></tr>
+      <tr><td>LR зависокий → loss скаче</td><td>Знизити до <code>1e-5</code></td></tr>
+      <tr><td>Overfit на 3 епохах</td><td><code>epochs=1</code> або більший датасет</td></tr>
+      <tr><td>VRAM OOM</td><td>Батч ↓, gradient_accumulation ↑ (ефективний batch той самий)</td></tr>
+      <tr><td>Модель надто agressive у форматі</td><td>Зменшити LoRA <code>r</code> до 8</td></tr>
+    </table>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Не починайте з власних hyperparameters.</b> Візьміть рецепт з Unsloth-документації або з паперу про конкретну модель — там уже все підібрано. Кастомний tuning — це <b>пастка</b> для початківця.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 8: LABEL MASKING ============================ -->
+  <section id="masking">
+    <h2><span class="num">08 ·</span> Label masking — silent bug №1 у SFT</h2>
+    <p class="lead">Класична помилка початківця: тренувати модель копіювати весь діалог, включно з системним промптом і user-запитом. <b style="color:#fff">При SFT мають обчислюватись gradients тільки на токенах assistant-відповіді.</b></p>
+
+    <h3>Що таке label masking — наочно</h3>
+    <pre><span class="c"># Pseudo-code label masking у SFT</span>
+input_ids   = [<span class="f">SYS</span>] [<span class="f">USER</span>] [<span class="f">ASSISTANT</span>] response_tokens
+labels      = [<span class="n">-100</span>] [<span class="n">-100</span>] [<span class="n">-100</span>]      response_tokens
+                                                <span class="c">↑</span>
+                       <span class="c">loss обчислюється тільки тут</span></pre>
+
+    <p class="pad">Спеціальне значення <code>-100</code> каже PyTorch <code>CrossEntropyLoss</code> <b>ігнорувати ці позиції</b>. System message і user message — це <b>input</b>, не <b>target</b>.</p>
+
+    <h3>Найпопулярніший marker у датасетах</h3>
+    <p class="pad"><code>### Response:</code> або <code>&lt;|assistant|&gt;</code>. Tokenizer їх знаходить → label masking автоматично. У сучасних бібліотеках (TRL, Unsloth, Axolotl) це робиться автоматично через <code>train_on_inputs=False</code> параметр.</p>
+
+    <div class="keypoint" style="margin-top:14px;border-left-color:var(--warn);background:rgba(255,118,118,0.08);border-color:rgba(255,118,118,0.3)">
+      <b style="color:var(--warn)">⚠ Без label masking</b> модель вчиться <b>генерувати свій же user-запит</b>, втрачає вміння instruction-following. Це <b>silent bug</b> — loss падає, метрики виглядають OK, але модель деградує. У production проявляється як "модель повторює питання користувача замість того щоб відповідати".
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 9: INFERENCE COST ============================ -->
+  <section id="cost">
+    <h2><span class="num">09 ·</span> Inference cost — економіка після training</h2>
+    <p class="lead">Fine-tuning не безкоштовний у production навіть після тренування. <b style="color:#fff">Розрахуй inference cost ДО початку</b>. Інакше натренуєте круту модель, яка економічно не виправдана.</p>
+
+    <h3>Три моделі вартості inference</h3>
+    <table>
+      <tr><th>Варіант</th><th>$ / 1M tokens</th><th>Latency</th><th>Setup</th></tr>
+      <tr>
+        <td><b>API base (Llama 3.3 70B через Together)</b></td>
+        <td>$0.88 / $0.88</td>
+        <td>~300ms</td>
+        <td>Нуль</td>
+      </tr>
+      <tr>
+        <td><b>API fine-tuned (dedicated endpoint)</b></td>
+        <td>$0.43-$0.86 за хвилину</td>
+        <td>~100ms</td>
+        <td>Endpoint management</td>
+      </tr>
+      <tr>
+        <td><b>Self-hosted fine-tuned (vLLM на власному GPU)</b></td>
+        <td>$0.10-$0.50 (compute only)</td>
+        <td>50-100ms</td>
+        <td>DevOps складно</td>
+      </tr>
+    </table>
+
+    <h3>Breakeven point — коли FT економічно виправданий</h3>
+    <ul class="checklist">
+      <li><b>&lt; 1M токенів/день</b> → API base + краще prompting / RAG. FT тут <b>не окупається</b>.</li>
+      <li><b>1-10M токенів/день</b> → API fine-tuned (без DevOps). Дешевше за base + якість краща.</li>
+      <li><b>&gt; 10M токенів/день</b> → Self-hosted з vLLM. На 5-20× дешевше API, але треба DevOps.</li>
+    </ul>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Інженерне правило:</b> не починайте з self-hosted. Спочатку API fine-tuning (Together / Fireworks) — щоб дізнатись чи fine-tuning <b>взагалі</b> дає потрібну якість. Потім, якщо traffic виправдовує — переходьте на self-hosted.
+    </div>
+
+    <h3>⚠ 2026 зміна: OpenAI закрила self-serve FT для нових організацій</h3>
+    <p class="pad" style="margin-top:8px">З <b>7 травня 2026</b> OpenAI заблокувала створення нових fine-tuning jobs для організацій що раніше не використовували FT. До <b>6 січня 2027</b> — повне закриття для всіх. Для нових AI engineer-ів у 2026 OpenAI FT <b>не є опцією</b>. Стек 2026 — <b>Together AI / Fireworks для cloud</b> або <b>Unsloth + Colab для local</b>.</p>
+  </section>
+
+  <!-- ============================ SECTION 10: PRODUCTION PIPELINE ============================ -->
+  <section id="pipeline">
+    <h2><span class="num">10 ·</span> Production pipeline — 7 кроків</h2>
+    <p class="lead">Як виглядає реальний fine-tuning цикл у компанії. <b style="color:#fff">Без кроку 1 (eval set) не починайте</b> — без нього неможливо зрозуміти що FT щось покращив.</p>
+
+    <div class="pipelineBox">
+      <div class="pipelineSteps" id="pipelineSteps">
+        <div class="pipelineStep active" data-step="1">
+          <span class="stepNum">01</span>
+          <h5>Eval set first</h5>
+          <p>100-500 ручних кейсів з очікуваними відповідями</p>
+        </div>
+        <div class="pipelineStep" data-step="2">
+          <span class="stepNum">02</span>
+          <h5>Baseline measure</h5>
+          <p>Прогнати base model через eval — точка відліку</p>
+        </div>
+        <div class="pipelineStep" data-step="3">
+          <span class="stepNum">03</span>
+          <h5>Dataset collection</h5>
+          <p>1K-10K training прикладів, hash-check vs eval</p>
+        </div>
+        <div class="pipelineStep" data-step="4">
+          <span class="stepNum">04</span>
+          <h5>Train</h5>
+          <p>QLoRA через Unsloth/Together, 1-3 епохи</p>
+        </div>
+        <div class="pipelineStep" data-step="5">
+          <span class="stepNum">05</span>
+          <h5>Eval vs baseline</h5>
+          <p>Обов'язково. Гірше за base? Рятуй дані, не модель</p>
+        </div>
+        <div class="pipelineStep" data-step="6">
+          <span class="stepNum">06</span>
+          <h5>Shadow deploy</h5>
+          <p>5-10% трафіку, порівнюй з base</p>
+        </div>
+        <div class="pipelineStep" data-step="7">
+          <span class="stepNum">07</span>
+          <h5>Rollout</h5>
+          <p>Поетапне розширення з контрольованими metrics</p>
+        </div>
+      </div>
+      <div class="pipelineDetail" id="pipelineDetail"></div>
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 11: WHAT BREAKS IN PROD ============================ -->
+  <section id="breaks">
+    <h2><span class="num">11 ·</span> Що ламається у проді — incident patterns</h2>
+    <p class="lead">Реальні баги команд що зробили fine-tuning. <b style="color:#fff">Кожен з них — це silent failure</b>: метрики виглядають OK, але модель деградує. Студенти на ДЗ зустрінуть мінімум 2 з 5.</p>
+
+    <div class="grid2">
+      <div class="card" style="border-left:3px solid var(--warn)">
+        <h4>🧠 Catastrophic forgetting</h4>
+        <p>Модель навчилась domain task, але втратила здатність до general reasoning. <b>Рішення:</b> змішати у train data ~10% general examples (Alpaca, ShareGPT).</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--warn)">
+        <h4>🔄 Train/serve skew</h4>
+        <p>Тренували на <code>### Response:</code> маркері, у проді шлемо інший prompt-format. Якість падає до random. <b>Рішення:</b> один tokenization pipeline у train і serve.</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--warn)">
+        <h4>🩸 Eval contamination</h4>
+        <p>Eval examples попали у training set. Метрики ідеальні, у проді — катастрофа. <b>Рішення:</b> hash-based split <b>до</b> будь-якої роботи з даними.</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--warn)">
+        <h4>📉 Безсимптомна деградація</h4>
+        <p>Шість місяців тому fine-tuned модель добре працювала, зараз гірша за base. Причини: drift у customer queries, новий тип запитів. <b>Рішення:</b> continuous evaluation з alertами (тема уроку 15).</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--warn)">
+        <h4>💥 GPU OOM під inference</h4>
+        <p>Quantized model працює локально, у проді (batch=32) валиться. <b>Рішення:</b> load testing перед rollout, vLLM з правильним <code>max_seq_len</code>.</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--warn)">
+        <h4>🔁 Repetition / loops</h4>
+        <p>Модель повторює training-фрази дослівно. Знак що датасет занадто homogenous або overfit. <b>Рішення:</b> 1 епоха, augmentation, температурний sampling.</p>
+      </div>
+    </div>
+
+    <div class="keypoint" style="margin-top:14px;border-left-color:var(--accent2);background:rgba(255,209,102,0.08);border-color:rgba(255,209,102,0.3)">
+      <b>Інженерне правило:</b> у звіті на ДЗ <b>обов'язково напишіть що НЕ вийшло</b>. Це не fail — це <b>правильний результат</b>. Розпізнати причину важливіше за ідеальні числа. Студент що знайшов train/serve skew у власному коді — кращий за того хто отримав magic 95% accuracy without explanation.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 12: RECAP & DECISION TREE ============================ -->
+  <section id="recap">
+    <h2><span class="num">12 ·</span> Recap і decision tree</h2>
+    <p class="lead">Підсумок уроку у вигляді практичних правил, які ви забираєте з собою.</p>
+
+    <div class="grid2">
+      <div class="card" style="border-left:3px solid var(--ok)">
+        <h4 style="color:var(--ok)">✓ Коли робити fine-tuning</h4>
+        <ul style="margin:0;padding-left:18px;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.7;color:#cdd5de">
+          <li>Стійкий output-формат який важко описати промптом (specific JSON schema, code style)</li>
+          <li>Доменна лексика яку base model не знає (медичний/юридичний/industrial)</li>
+          <li>Скорочення промпту (system message з 5K токенів → 200 токенів)</li>
+          <li>Latency-critical: self-hosted fine-tuned model + менший base = швидше за API</li>
+        </ul>
+      </div>
+      <div class="card" style="border-left:3px solid var(--warn)">
+        <h4 style="color:var(--warn)">✗ Коли НЕ робити fine-tuning</h4>
+        <ul style="margin:0;padding-left:18px;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.7;color:#cdd5de">
+          <li>Потрібні актуальні дані → RAG</li>
+          <li>Не виміряли baseline якість → спершу eval</li>
+          <li>&lt; 500 якісних training examples → збирай датасет, потім тренуй</li>
+          <li>&lt; 1M токенів/день у продакшені → ROI негативний</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Стек 2026 для AI engineer'а який починає з FT</h3>
+    <pre><span class="c"># Training</span>
+Unsloth + QLoRA <span class="c"># Colab T4 (free) або власна RTX 12+ GB</span>
+Together AI    <span class="c"># cloud, $1-5 на середній FT</span>
+Fireworks      <span class="c"># cloud, схожі ціни</span>
+
+<span class="c"># Serving</span>
+vLLM           <span class="c"># self-hosted, найшвидший</span>
+Together API   <span class="c"># dedicated endpoint від $0.43/хв</span>
+
+<span class="c"># Eval</span>
+Promptfoo / DeepEval <span class="c"># з версіонованим eval set у git</span>
+
+<span class="c"># Що НЕ використовувати у 2026</span>
+OpenAI fine-tuning  <span class="c"># закрита для нових org з травня 2026</span></pre>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Головне правило уроку:</b> fine-tuning — це <b>інженерна задача про дані і метрики</b>, не про модель. ML-engineering у 2026 = <b>80% data + 20% training</b>. Студент що навчився <b>вимірювати</b> quality lift важливіший за того хто знає всі гіперпараметри.
+    </div>
+
+    <h3>Що далі — ДЗ</h3>
+    <p class="pad">Уявіть SaaS-компанію з 50К support emails/день. Потрібно автоматично перетворювати їх у JSON для CRM. <b>Натренуйте власну Llama 3.1 8B</b> через Unsloth у Google Colab. Виміряйте baseline (Llama 3.1 8B base) vs fine-tuned. Чесно опишіть що вийшло і що ні. Звіт: comparison table + cost analysis + бізнес-рекомендація.</p>
+    <p class="pad"><b>Час:</b> 3-4 години · <b>Бюджет:</b> $0 (Colab free) · <b>Acceptance:</b> eval set до тренування, обидві моделі на тих самих 30 прикладах, hash-check overlap, чесний розбір failures.</p>
+  </section>
+
+  <div class="footer">
+    <b>LLM Fine-Tuning in Production</b> · Заняття 17 · AI Engineering Course<br>
+    Що залишається після уроку: вміння виміряти quality lift, eval-driven thinking, розуміння коли FT справді варто.
+  </div>
+</div>
+
+<script>
+// === DEMO 1: Approach selector ===
+const approachData = {
+  prompting: {
+    title: '① Prompting — лише input',
+    desc: 'Системний промпт + few-shot examples. Базовий підхід для 90% AI-задач. Нічого не змінюється у моделі — лише input.',
+    bars: [
+      ['Setup time', 5, 100, 'prompting'],
+      ['Cost / місяць', 0, 100, 'prompting'],
+      ['Швидкість ітерації', 100, 100, 'prompting'],
+      ['Контроль якості', 40, 100, 'prompting'],
+    ],
+    when: '<b>Коли:</b> прості classification, summarization, extraction де GPT-4o/Claude вже добре справляються з промптом + 3-5 прикладів.',
+  },
+  rag: {
+    title: '② RAG — Retrieval-Augmented Generation',
+    desc: 'Перед запитом до LLM шукаємо релевантні документи у vector DB (embeddings). Інжектуємо їх у context. Корисно для актуальних/приватних даних.',
+    bars: [
+      ['Setup time', 30, 100, 'rag'],
+      ['Cost / місяць', 25, 100, 'rag'],
+      ['Швидкість ітерації', 70, 100, 'rag'],
+      ['Контроль якості', 65, 100, 'rag'],
+    ],
+    when: '<b>Коли:</b> Q&A над вашими документами, support chatbot з вікі, поки база змінюється. <b>НЕ для:</b> зміни стилю відповідей або scheme output.',
+  },
+  ft: {
+    title: '③ Fine-tuning — змінюємо ваги моделі',
+    desc: 'Donавчаємо модель на 500-50K прикладах вашої задачі. Зміна стилю, формату, доменної лексики. Через LoRA — лише ~10M params замість всієї моделі.',
+    bars: [
+      ['Setup time', 75, 100, 'ft'],
+      ['Cost / місяць', 60, 100, 'ft'],
+      ['Швидкість ітерації', 35, 100, 'ft'],
+      ['Контроль якості', 90, 100, 'ft'],
+    ],
+    when: '<b>Коли:</b> стабільний output-формат (JSON schema), доменна лексика, скорочення промпту, latency-critical. <b>НЕ для:</b> актуальних даних — це RAG.',
+  },
+};
+let activeApproach = 'prompting';
+function renderApproach() {
+  const d = approachData[activeApproach];
+  document.querySelectorAll('.approachCard').forEach(c => c.classList.toggle('active', c.dataset.approach === activeApproach));
+  let html = '<b>' + d.title + '</b><div style="margin:6px 0 10px">' + d.desc + '</div>';
+  for (const [lbl, val, max, cls] of d.bars) {
+    const pct = Math.round(val / max * 100);
+    html += '<div class="barRow"><div class="barLbl">' + lbl + '</div><div class="barTrack"><div class="barFill ' + cls + '" style="width:' + pct + '%"></div></div><div class="barNum">' + pct + '%</div></div>';
+  }
+  html += '<div style="margin-top:8px">' + d.when + '</div>';
+  document.getElementById('approachDetail').innerHTML = html;
+}
+document.querySelectorAll('.approachCard').forEach(c => {
+  c.addEventListener('click', () => { activeApproach = c.dataset.approach; renderApproach(); });
+});
+renderApproach();
+
+// === DEMO 2: Pipeline step selector ===
+const pipelineData = {
+  1: {
+    title: '01 · Eval set first',
+    body: 'Створюємо <b>30-500 прикладів</b> з ground truth <b>ДО</b> будь-якого тренування. Покриваємо edge cases: anonymous emails, multiple issues, sarcasm. Це <b>лінійка</b> для всіх майбутніх вимірювань. <span class="danger">Без eval set fine-tuning — це wishful thinking, не engineering.</span>',
+  },
+  2: {
+    title: '02 · Baseline measurement',
+    body: 'Прогнати base model через eval set, зафіксувати метрики у <code>baseline_metrics.json</code>: JSON valid rate, exact match, field accuracy, avg tokens. <b>Це твоя точка відліку</b> — без неї ти не зможеш сказати чи fine-tuning щось покращив.',
+  },
+  3: {
+    title: '03 · Dataset collection',
+    body: 'Зібрати <b>500-10K training examples</b>: з production logs, customer tickets, synthetic generation, або вручну. Формат OpenAI chat: <code>{"messages": [...]}</code>. <span class="danger">Hash-based check що нема overlap з eval set — обов\'язково</span>.',
+  },
+  4: {
+    title: '04 · Train',
+    body: 'QLoRA на одному H100 / T4 через <b>Unsloth</b> або cloud API (<b>Together AI</b>). Зазвичай <b>1-3 епохи</b>, дефолтні hyperparameters. Слідкуйте за <b>train loss</b> у W&B або dashboard — якщо не падає, датасет broken.',
+  },
+  5: {
+    title: '05 · Eval vs baseline',
+    body: 'Прогнати <b>той самий eval</b> через fine-tuned model. Створити <code>finetuned_metrics.json</code>. Порівняти з baseline. <span class="danger">Якщо fine-tuned гірша за base — рятуй дані, не модель.</span> Найчастіше проблема у train/serve skew або contamination.',
+  },
+  6: {
+    title: '06 · Shadow deploy',
+    body: '<b>5-10% трафіку</b> йде через fine-tuned, решта через base. Порівнюєш metrics на реальних запитах (не лише eval). Це знаходить production-distribution проблеми які eval не показав. Тривалість: 1-2 тижні.',
+  },
+  7: {
+    title: '07 · Rollout',
+    body: 'Поетапне розширення: 25% → 50% → 100%. На кожному рівні моніторинг (тема уроку 15): quality metrics, latency, cost. <b>Rollback plan</b> готовий завжди — якщо щось ламається, переключаємо traffic на base за хвилину.',
+  },
+};
+let activePipeline = 1;
+function renderPipeline() {
+  const d = pipelineData[activePipeline];
+  document.querySelectorAll('.pipelineStep').forEach(s => s.classList.toggle('active', parseInt(s.dataset.step) === activePipeline));
+  document.getElementById('pipelineDetail').innerHTML = '<h4 style="margin:0 0 8px;color:#fff;font-size:14px">' + d.title + '</h4>' + d.body;
+}
+document.querySelectorAll('.pipelineStep').forEach(s => {
+  s.addEventListener('click', () => { activePipeline = parseInt(s.dataset.step); renderPipeline(); });
+});
+renderPipeline();
+</script>
+</body>
+</html>

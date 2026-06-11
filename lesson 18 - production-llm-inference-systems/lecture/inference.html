@@ -1,0 +1,1444 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Production LLM Inference Systems — заняття 18</title>
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#15181d; --panel2:#1d2127; --line:#2a2f37;
+    --text:#e6e8ec; --muted:#9aa3ad;
+    --accent:#7cd1ff; --accent2:#ffd166; --accent3:#9be37c; --accent4:#c79bff; --accent5:#ff7eb6;
+    --warn:#ff7676; --ok:#9be37c;
+    --api:#7cd1ff; --self:#ff7eb6; --cache:#9be37c; --routing:#c79bff; --stream:#ffd166;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .wrap{max-width:1320px;margin:0 auto;padding:24px}
+  h1{font-size:30px;letter-spacing:.5px;margin:0 0 6px}
+  h1 small{color:var(--muted);font-weight:400;font-size:14px;display:block;margin-top:6px}
+  .sub{color:var(--muted);margin-bottom:24px;font-size:14px;line-height:1.6;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
+
+  section{margin:36px 0;padding:24px;background:var(--panel);border:1px solid var(--line);border-radius:14px;scroll-margin-top:20px}
+  section h2{font-size:20px;margin:0 0 8px;color:#fff;letter-spacing:.5px}
+  section h2 .num{color:var(--accent);font-weight:400}
+  section .lead{color:var(--muted);margin:0 0 18px;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;font-size:14px;line-height:1.6}
+  section h3{font-size:13px;margin:18px 0 8px;color:#fff;text-transform:uppercase;letter-spacing:1.2px}
+
+  .pad{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;line-height:1.65;color:#cdd5de}
+  .pad b{color:#fff}
+  .pad code{background:#11151a;border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--accent)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px}
+  @media(max-width:980px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .card h4{margin:0 0 8px;font-size:13px;color:#fff;letter-spacing:.5px}
+  .card p{margin:0;color:#cdd5de;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;font-size:13px;line-height:1.55}
+
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;font-size:13px}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;background:var(--panel2)}
+  td b{color:#fff}
+  td code{background:#11151a;border:1px solid var(--line);border-radius:3px;padding:1px 5px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--accent)}
+  td.yes{color:var(--ok)}
+  td.no{color:var(--warn)}
+  td.partial{color:var(--accent2)}
+
+  pre{background:#0a0c0f;border:1px solid var(--line);border-radius:8px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.5;color:#cdd5de;margin:8px 0}
+  pre .k{color:#ff7eb6}
+  pre .s{color:#9be37c}
+  pre .c{color:#6a737d;font-style:italic}
+  pre .n{color:#7cd1ff}
+  pre .f{color:#ffd166}
+
+  .btn{background:#26303b;color:#fff;border:1px solid #3a4654;border-radius:8px;padding:7px 14px;cursor:pointer;font:inherit;font-size:12px;font-weight:600;transition:all .15s}
+  .btn:hover{border-color:#57667a;background:#2d3845}
+  .btn.primary{background:var(--accent);color:#0b0d10;border-color:var(--accent)}
+  .btn.primary:hover{background:#a4dfff;border-color:#a4dfff}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-size:11px;color:var(--muted)}
+  .pill.ok{background:rgba(155,227,124,0.15);border-color:var(--ok);color:var(--ok)}
+  .pill.warn{background:rgba(255,118,118,0.15);border-color:var(--warn);color:var(--warn)}
+  .pill.acc{background:rgba(124,209,255,0.15);border-color:var(--accent);color:var(--accent)}
+
+  .keypoint{padding:12px 14px;background:rgba(124,209,255,0.08);border:1px solid rgba(124,209,255,0.3);border-left:3px solid var(--accent);border-radius:8px;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;line-height:1.6;color:#cdd5de}
+  .keypoint b{color:#fff}
+
+  .checklist{list-style:none;padding:0;margin:0}
+  .checklist li{padding:9px 12px 9px 36px;margin:5px 0;background:var(--panel2);border:1px solid var(--line);border-radius:8px;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#cdd5de;position:relative}
+  .checklist li:before{content:"✓";position:absolute;left:12px;top:9px;color:var(--ok);font-weight:700}
+  .checklist li.warn:before{content:"⚠";color:var(--warn)}
+  .checklist li.no:before{content:"✗";color:var(--warn)}
+  .checklist li b{color:#fff}
+
+  /* === HERO: Cost framework animation === */
+  .heroBox{background:linear-gradient(135deg,#0d1620 0%,#11171f 100%);border:1px solid rgba(124,209,255,0.3);border-radius:14px;padding:20px;margin:0 0 18px;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+  .heroBox h3{margin:0 0 6px;color:#fff;font-size:14px;letter-spacing:.5px;text-transform:uppercase}
+  .heroBox .sub{margin:0 0 16px;color:var(--muted);font-size:13px;line-height:1.5}
+  .costBars{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .costRow{display:flex;align-items:center;gap:10px;font-size:13px}
+  .costLbl{width:240px;color:#cdd5de;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .costTrack{flex:1;height:24px;background:#0a0d12;border:1px solid var(--line);border-radius:5px;overflow:hidden;position:relative}
+  .costFill{height:100%;transition:width 1.5s cubic-bezier(.4,0,.2,1);display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:#0b0d10;font-family:ui-monospace,Menlo,monospace}
+  .costFill.inference{background:linear-gradient(90deg,var(--warn) 0%,#ff9a76 100%)}
+  .costFill.training{background:linear-gradient(90deg,var(--accent2) 0%,#ffe599 100%)}
+  .costFill.storage{background:linear-gradient(90deg,var(--accent) 0%,#a4dfff 100%)}
+  .costFill.mon{background:linear-gradient(90deg,var(--ok) 0%,#c5ffb3 100%)}
+
+  /* === Pillars selector === */
+  .pillarGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px}
+  @media(max-width:780px){.pillarGrid{grid-template-columns:1fr}}
+  .pillarCard{background:#0a0d12;border:2px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;transition:all .2s}
+  .pillarCard:hover{transform:translateY(-2px)}
+  .pillarCard.active.latency{border-color:var(--api);box-shadow:0 0 20px rgba(124,209,255,.25)}
+  .pillarCard.active.throughput{border-color:var(--cache);box-shadow:0 0 20px rgba(155,227,124,.25)}
+  .pillarCard.active.quality{border-color:var(--routing);box-shadow:0 0 20px rgba(199,155,255,.25)}
+  .pillarCard h4{margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:.5px}
+  .pillarCard.latency h4{color:var(--api)}
+  .pillarCard.throughput h4{color:var(--cache)}
+  .pillarCard.quality h4{color:var(--routing)}
+  .pillarCard .meta{font-size:11px;color:var(--muted);font-family:ui-monospace,Menlo,monospace;margin-bottom:6px}
+  .pillarCard p{margin:0;font-size:12px;color:#cdd5de;line-height:1.5}
+  .pillarDetail{margin-top:14px;padding:14px;background:#0a0d12;border:1px solid var(--line);border-radius:10px;min-height:120px;font-size:13px;line-height:1.6;color:#cdd5de;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+  .pillarDetail b{color:#fff}
+
+  /* === Decision tree (Self-hosted vs API) === */
+  .dtreeBox{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:18px;margin:14px 0}
+  .dtreeQuestion{padding:14px 18px;background:#11151a;border:1px solid var(--line);border-radius:10px;text-align:center;margin:10px 0;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:14px;color:#fff;font-weight:600}
+  .dtreeOptions{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin:10px 0}
+  .dtreeBtn{background:#1d2127;color:#cdd5de;border:1px solid var(--line);border-radius:8px;padding:8px 18px;cursor:pointer;font:inherit;font-size:13px;font-weight:600;transition:all .15s;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+  .dtreeBtn:hover{border-color:var(--accent);color:#fff}
+  .dtreeBtn.yes{border-left:3px solid var(--ok)}
+  .dtreeBtn.no{border-left:3px solid var(--warn)}
+  .dtreeResult{margin-top:14px;padding:16px 18px;background:#11151a;border:2px solid var(--accent);border-radius:10px;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.65;color:#cdd5de;display:none}
+  .dtreeResult.active{display:block;animation:fadeIn .3s}
+  .dtreeResult b{color:#fff}
+  .dtreeResult.api{border-color:var(--api)}
+  .dtreeResult.self{border-color:var(--self)}
+  .dtreeResult .verdict{font-size:18px;color:#fff;font-weight:700;margin-bottom:8px}
+  .dtreeResult.api .verdict{color:var(--api)}
+  .dtreeResult.self .verdict{color:var(--self)}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .dtreeReset{margin-top:12px;text-align:center}
+
+  /* === Breakeven graph === */
+  .beBox{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:18px;margin:14px 0}
+  .beSvg{width:100%;height:auto;display:block}
+  .beControls{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:14px;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:12px}
+  .beSlider{display:flex;align-items:center;gap:8px}
+  .beSlider label{color:var(--muted);min-width:130px}
+  .beSlider input[type=range]{width:140px}
+  .beSlider .val{color:#fff;font-family:ui-monospace,Menlo,monospace;font-weight:700;min-width:60px;text-align:right}
+  .beVerdict{margin-top:14px;padding:14px;background:#11151a;border:1px solid var(--line);border-radius:8px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:14px;color:#cdd5de}
+  .beVerdict b{color:#fff}
+  .beVerdict.win-api{border-left:3px solid var(--api)}
+  .beVerdict.win-self{border-left:3px solid var(--self)}
+
+  /* === Multi-provider routing visualization === */
+  .routingBox{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:18px;margin:14px 0;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+  .routingHead{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .routingHead h4{margin:0;color:#fff;font-size:13px;text-transform:uppercase;letter-spacing:.5px}
+  .routingStage{position:relative;background:#0e1318;border:1px solid var(--line);border-radius:10px;padding:20px;min-height:340px}
+  .routingSvg{width:100%;height:auto}
+  .routingCaption{margin-top:12px;padding:12px 14px;background:#11151a;border:1px solid var(--line);border-radius:8px;min-height:50px;font-size:13px;line-height:1.6;color:#cdd5de}
+  .routingCaption .step{display:inline-block;background:var(--routing);color:#0b0d10;padding:2px 8px;border-radius:4px;font-weight:700;font-size:11px;margin-right:8px;text-transform:uppercase}
+  .routingCaption b{color:#fff}
+
+  /* === Streaming demo === */
+  .streamBox{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:18px;margin:14px 0;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+  .streamGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:780px){.streamGrid{grid-template-columns:1fr}}
+  .streamPanel{background:#0e1318;border:1px solid var(--line);border-radius:10px;padding:14px;min-height:240px;position:relative;overflow:hidden}
+  .streamPanel.no-stream{border-left:3px solid var(--warn)}
+  .streamPanel.stream{border-left:3px solid var(--ok)}
+  .streamPanel h5{margin:0 0 6px;font-size:13px;color:#fff;font-weight:700}
+  .streamPanel .spinner{width:24px;height:24px;border:3px solid var(--line);border-top-color:var(--warn);border-radius:50%;animation:spin 1s linear infinite;margin:20px auto}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .streamPanel .timer{position:absolute;top:14px;right:14px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted);background:#11151a;border:1px solid var(--line);padding:2px 8px;border-radius:4px}
+  .streamText{font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;color:#cdd5de;white-space:pre-wrap;min-height:160px}
+  .streamCursor{display:inline-block;width:8px;height:14px;background:var(--ok);vertical-align:middle;animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .streamControls{margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .streamMetrics{margin-top:10px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted);text-align:center}
+  .streamMetrics .ok{color:var(--ok)}
+  .streamMetrics .warn{color:var(--warn)}
+
+  /* === Cache pyramid === */
+  .cacheBox{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:18px;margin:14px 0}
+  .cachePyramid{display:flex;flex-direction:column;gap:8px;margin:14px 0;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+  .cacheLayer{padding:14px 18px;border-radius:8px;cursor:pointer;transition:all .2s;border:2px solid var(--line);background:#11151a}
+  .cacheLayer:hover{transform:translateX(4px)}
+  .cacheLayer.active{border-color:var(--cache);box-shadow:0 0 16px rgba(155,227,124,.2)}
+  .cacheLayer h5{margin:0 0 4px;font-size:13px;color:#fff;display:flex;align-items:center;gap:10px}
+  .cacheLayer .lvl{background:var(--cache);color:#0b0d10;padding:2px 8px;border-radius:4px;font-family:ui-monospace,Menlo,monospace;font-size:10px;font-weight:700}
+  .cacheLayer p{margin:4px 0 0;font-size:12px;color:#9aa3ad;line-height:1.5}
+  .cacheLayer .stats{display:flex;gap:14px;margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:11px}
+  .cacheLayer .stats span{color:var(--cache)}
+  .cacheLayer .stats b{color:#fff;margin-left:4px}
+  .cacheTotal{margin-top:14px;padding:14px;background:linear-gradient(135deg,rgba(155,227,124,.1) 0%,rgba(155,227,124,.03) 100%);border:1px solid rgba(155,227,124,.3);border-radius:10px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+  .cacheTotal .bigNum{font-size:32px;color:var(--ok);font-family:ui-monospace,Menlo,monospace;font-weight:700;transition:all .4s}
+  .cacheTotal .lbl{font-size:12px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+
+  /* === Cost calculator (per-user budget) === */
+  .calcBox{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:18px;margin:14px 0;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+  .calcGrid{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+  @media(max-width:780px){.calcGrid{grid-template-columns:1fr}}
+  .calcInputs{display:flex;flex-direction:column;gap:12px}
+  .calcRow{display:flex;align-items:center;gap:10px;font-size:13px}
+  .calcRow label{width:180px;color:var(--muted)}
+  .calcRow input[type=range]{flex:1}
+  .calcRow .val{min-width:90px;text-align:right;color:#fff;font-family:ui-monospace,Menlo,monospace;font-weight:700}
+  .calcResult{padding:16px;background:#11151a;border:1px solid var(--line);border-radius:10px;text-align:center}
+  .calcResult .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .calcResult .num{font-size:28px;color:var(--warn);font-family:ui-monospace,Menlo,monospace;font-weight:700;margin:6px 0}
+  .calcResult .meta{font-size:11px;color:#cdd5de;font-family:ui-monospace,Menlo,monospace}
+  .calcResult.safe .num{color:var(--ok)}
+
+  /* === Failure stories carousel === */
+  .failBox{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:18px;margin:14px 0}
+  .failNav{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+  .failTab{background:#1d2127;color:#9aa3ad;border:1px solid var(--line);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit;font-size:11px;font-family:ui-monospace,Menlo,monospace;font-weight:700;transition:all .15s}
+  .failTab:hover{color:#fff}
+  .failTab.active{background:var(--warn);color:#0b0d10;border-color:var(--warn)}
+  .failContent{padding:18px;background:#11151a;border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:10px;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.65;color:#cdd5de;min-height:160px}
+  .failContent h4{margin:0 0 8px;color:var(--warn);font-size:15px}
+  .failContent b{color:#fff}
+  .failContent .tag{display:inline-block;background:var(--panel2);border:1px solid var(--line);padding:2px 8px;border-radius:4px;font-family:ui-monospace,Menlo,monospace;font-size:10px;color:var(--muted);margin-right:4px;text-transform:uppercase}
+  .failContent .lesson{margin-top:10px;padding:10px 12px;background:rgba(155,227,124,.08);border-left:2px solid var(--ok);border-radius:4px}
+  .failContent .lesson b{color:var(--ok)}
+
+  /* === Latency budget visualization === */
+  .latBox{background:#0a0d12;border:1px solid var(--line);border-radius:12px;padding:18px;margin:14px 0;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+  .latStack{display:flex;flex-direction:column;gap:4px;margin:14px 0}
+  .latRow{display:flex;align-items:center;gap:10px;font-size:12px}
+  .latLbl{width:200px;color:#cdd5de;font-family:ui-monospace,Menlo,monospace;font-size:11px}
+  .latBar{flex:1;height:22px;background:#11151a;border:1px solid var(--line);border-radius:4px;overflow:hidden;position:relative}
+  .latFill{height:100%;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:#0b0d10;font-family:ui-monospace,Menlo,monospace;white-space:nowrap;transition:all .4s}
+  .latTotal{margin-top:14px;padding:12px;background:#11151a;border:1px dashed var(--line);border-radius:8px;text-align:center;font-size:13px;color:#cdd5de}
+  .latTotal b{color:#fff}
+  .latTotal .perceived{color:var(--ok);font-weight:700}
+
+  /* === Section TOC === */
+  .toc{position:sticky;top:0;z-index:10;background:rgba(11,13,16,.95);backdrop-filter:blur(8px);padding:10px 14px;margin:0 0 18px;border:1px solid var(--line);border-radius:10px;font-family:ui-monospace,Menlo,monospace;font-size:11px;display:flex;gap:8px;flex-wrap:wrap}
+  .toc a{color:var(--muted);text-decoration:none;padding:3px 8px;border-radius:4px;border:1px solid transparent;transition:all .15s}
+  .toc a:hover{color:#fff;border-color:var(--line);background:var(--panel2)}
+
+  .footer{margin-top:40px;padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;text-align:center;color:var(--muted);font-size:12px;font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;line-height:1.6}
+  .footer b{color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Production LLM Inference Systems
+    <small>Заняття 18 · AI Engineering Course · architecture mindset для AI engineer</small>
+  </h1>
+  <p class="sub">Inference становить <b style="color:#fff">70-85% операційного бюджету</b> production AI-сервісу. Урок присвячено архітектурним рішенням, які приймає AI engineer: вибір між API та self-hosted інфраструктурою, multi-provider routing, структурованими outputs, багаторівневим кешуванням, дисципліною контролю витрат. Завдання курсу — забезпечити інженерну компетентність для проектування economically sustainable inference systems.</p>
+
+  <nav class="toc">
+    <a href="#intro">01 · cost framework</a>
+    <a href="#pillars">02 · three pillars</a>
+    <a href="#vs">03 · API vs self-hosted</a>
+    <a href="#routing">04 · multi-provider</a>
+    <a href="#engines">05 · inference engines</a>
+    <a href="#streaming">06 · streaming + TTFT</a>
+    <a href="#structured">07 · structured outputs</a>
+    <a href="#caching">08 · caching strategies</a>
+    <a href="#cost">09 · cost discipline</a>
+    <a href="#checklist">10 · production checklist</a>
+  </nav>
+
+  <!-- ===================== HERO ===================== -->
+  <div class="heroBox">
+    <h3>Розподіл операційних витрат AI-сервісу</h3>
+    <div class="sub">Структура витрат production AI-системи має асиметричний характер. Основна частка операційного бюджету припадає на <b style="color:#fff">inference compute</b>. Інші компоненти (storage, tracing, CI/CD, monitoring) у сукупності складають менше 20%.</div>
+    <div class="costBars" id="costBars">
+      <div class="costRow"><div class="costLbl">Inference compute</div><div class="costTrack"><div class="costFill inference" data-target="78" style="width:0">0%</div></div></div>
+      <div class="costRow"><div class="costLbl">Training + fine-tuning</div><div class="costTrack"><div class="costFill training" data-target="10" style="width:0">0%</div></div></div>
+      <div class="costRow"><div class="costLbl">Storage + network</div><div class="costTrack"><div class="costFill storage" data-target="8" style="width:0">0%</div></div></div>
+      <div class="costRow"><div class="costLbl">Monitoring + observability</div><div class="costTrack"><div class="costFill mon" data-target="4" style="width:0">0%</div></div></div>
+    </div>
+    <div style="margin-top:14px;font-size:12px;color:var(--muted);text-align:center">Training є одноразовою операцією. Inference виконується безперервно протягом життєвого циклу сервісу. Відповідно, оптимізація inference має значно вищий cumulative impact порівняно з іншими компонентами стеку.</div>
+  </div>
+
+  <!-- ============================ SECTION 1: COST FRAMEWORK ============================ -->
+  <section id="intro">
+    <h2><span class="num">01 ·</span> Розмежування ролей: AI Engineer та ML Platform Engineer</h2>
+    <p class="lead">Урок присвячено компетенціям AI engineer у домені inference systems. Тематика низькорівневого tuning (PagedAttention, kernel optimization, GPU sharding) є предметом окремої дисципліни — ML platform engineering. Kubernetes-оркестрація розглянута у lesson 14. Фокус поточного матеріалу — <b style="color:#fff">архітектурні рішення</b>, що приймаються на етапах проектування та масштабування системи.</p>
+
+    <div class="grid2">
+      <div class="card">
+        <h4>Компетенції AI Engineer</h4>
+        <p>Обґрунтування вибору API vs self-hosted на основі quantitative analysis. Проектування multi-provider routing зі стратегією fallback. Конфігурація багаторівневого кешування. Інтеграція structured outputs з downstream системами. Реалізація per-user cost controls.</p>
+      </div>
+      <div class="card">
+        <h4>Компетенції ML Platform Engineer</h4>
+        <p>Тюнінг параметрів PagedAttention. Розробка CUDA kernels. Конфігурація GPU sharding strategies. Імплементація custom quantization pipelines. Налаштування TensorRT inference graphs. Оптимізація GPU memory layout.</p>
+      </div>
+    </div>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Принципове розмежування:</b> AI engineer приймає архітектурні рішення щодо inference systems. Глибока оптимізація компонентів інфраструктури належить до іншої професійної області. Орієнтовний обсяг необхідних знань — на рівні tool awareness та decision frameworks.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 2: THREE PILLARS ============================ -->
+  <section id="pillars">
+    <h2><span class="num">02 ·</span> Three Pillars: Latency, Throughput, Quality</h2>
+    <p class="lead">Архітектурні рішення у домені inference systems характеризуються <b style="color:#fff">trade-off між трьома вимірами</b>. Одночасна оптимізація всіх трьох вимірів є неможливою через фундаментальні обмеження. Ідентифікація домінуючого виміру для конкретного use case є необхідною передумовою вибору технологічного стеку.</p>
+
+    <h3>Інтерактивне порівняння — оберіть pillar для деталізації trade-offs</h3>
+    <div class="pillarGrid">
+      <div class="pillarCard active latency" data-pillar="latency">
+        <h4>Latency</h4>
+        <div class="meta">TTFT &lt; 500ms · TPOT &lt; 30ms</div>
+        <p>Час відгуку системи. Домінуючий вимір для chat-assistants та real-time інтерфейсів.</p>
+      </div>
+      <div class="pillarCard throughput" data-pillar="throughput">
+        <h4>Throughput</h4>
+        <div class="meta">RPS · tokens/sec</div>
+        <p>Кількість запитів за одиницю часу. Домінуючий вимір для batch processing та document pipelines.</p>
+      </div>
+      <div class="pillarCard quality" data-pillar="quality">
+        <h4>Quality</h4>
+        <div class="meta">accuracy · eval scores</div>
+        <p>Точність та коректність output. Домінуючий вимір для medical, legal та financial use cases.</p>
+      </div>
+    </div>
+    <div class="pillarDetail" id="pillarDetail"></div>
+
+    <h3>Trade-off matrix архітектурних рішень</h3>
+    <table>
+      <tr><th>Рішення</th><th>Latency</th><th>Throughput</th><th>Quality</th></tr>
+      <tr><td>Збільшення batch size</td><td class="no">погіршення</td><td class="yes">покращення</td><td>—</td></tr>
+      <tr><td>Quantization int4 (AWQ)</td><td class="yes">покращення</td><td class="yes">покращення</td><td class="partial">деградація ~1%</td></tr>
+      <tr><td>Streaming (SSE)</td><td class="yes">покращення perceived latency</td><td>—</td><td>—</td></tr>
+      <tr><td>Менша модель (8B vs 70B)</td><td class="yes">покращення</td><td class="yes">покращення</td><td class="no">деградація</td></tr>
+      <tr><td>Багаторівневе кешування</td><td class="yes">покращення</td><td class="yes">покращення</td><td>—</td></tr>
+    </table>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Decision rule:</b> ідентифікація домінуючого виміру повинна передувати вибору технологічного стеку. Chat assistants — latency. Batch document processing — throughput. Medical, legal, financial domains — quality. Спроба одночасної оптимізації всіх трьох вимірів є архітектурною помилкою.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 3: SELF-HOSTED vs API ============================ -->
+  <section id="vs">
+    <h2><span class="num">03 ·</span> Self-hosted vs API: Архітектурне рішення</h2>
+    <p class="lead">Вибір між API-based та self-hosted інфраструктурою є <b style="color:#fff">фундаментальним архітектурним рішенням</b>, що приймається на початковій стадії проекту. Помилка вибору має значні економічні наслідки: масштаб втрат вимірюється десятками тисяч доларів щомісяця або зайвими інвестиціями у DevOps-інфраструктуру. Подальший виклад містить decision framework для обґрунтованого вибору.</p>
+
+    <h3>Порівняння по 7 критеріях</h3>
+    <table>
+      <tr><th>Критерій</th><th style="color:var(--api)">API provider</th><th style="color:var(--self)">Self-hosted (vLLM)</th></tr>
+      <tr><td>Setup time</td><td>Хвилини</td><td>Дні-тижні</td></tr>
+      <tr><td>Initial cost</td><td>$0</td><td>$5-50K (GPU)</td></tr>
+      <tr><td>Cost / 1M tokens</td><td>$0.5-15</td><td>$0.1-2 (compute)</td></tr>
+      <tr><td>Latency</td><td>200-500ms</td><td>50-200ms</td></tr>
+      <tr><td>Privacy, compliance</td><td>Дані йдуть провайдеру</td><td>Власна інфраструктура</td></tr>
+      <tr><td>Custom fine-tuned models</td><td>Лише підтримані провайдером</td><td>Будь-які з HuggingFace</td></tr>
+      <tr><td>DevOps overhead</td><td>Нуль</td><td>Великий</td></tr>
+    </table>
+
+    <h3>Decision tree — інтерактивна послідовність критеріїв</h3>
+    <div class="dtreeBox" id="dtreeBox">
+      <div class="dtreeQuestion" id="dtreeQ">Завантаження...</div>
+      <div class="dtreeOptions" id="dtreeOpts"></div>
+      <div class="dtreeResult" id="dtreeResult"></div>
+      <div class="dtreeReset"><button class="btn" id="dtreeReset">↻ Почати з початку</button></div>
+    </div>
+
+    <h3>Breakeven analysis — параметрична модель порівняння вартості</h3>
+    <div class="beBox">
+      <svg class="beSvg" id="beSvg" viewBox="0 0 800 320" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="apiGrad" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="var(--api)" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="var(--api)" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="selfGrad" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="var(--self)" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="var(--self)" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <!-- Axes -->
+        <line x1="60" y1="280" x2="760" y2="280" stroke="var(--line)" stroke-width="1"/>
+        <line x1="60" y1="40" x2="60" y2="280" stroke="var(--line)" stroke-width="1"/>
+        <!-- X-axis labels -->
+        <text x="60" y="300" fill="var(--muted)" font-family="ui-monospace" font-size="10" text-anchor="middle">0</text>
+        <text x="200" y="300" fill="var(--muted)" font-family="ui-monospace" font-size="10" text-anchor="middle">10M</text>
+        <text x="340" y="300" fill="var(--muted)" font-family="ui-monospace" font-size="10" text-anchor="middle">20M</text>
+        <text x="480" y="300" fill="var(--muted)" font-family="ui-monospace" font-size="10" text-anchor="middle">30M</text>
+        <text x="620" y="300" fill="var(--muted)" font-family="ui-monospace" font-size="10" text-anchor="middle">40M</text>
+        <text x="760" y="300" fill="var(--muted)" font-family="ui-monospace" font-size="10" text-anchor="middle">50M+</text>
+        <text x="410" y="315" fill="var(--muted)" font-family="ui-monospace" font-size="11" text-anchor="middle">tokens / день</text>
+        <!-- Y-axis labels -->
+        <text x="50" y="285" fill="var(--muted)" font-family="ui-monospace" font-size="10" text-anchor="end">$0</text>
+        <text x="50" y="220" fill="var(--muted)" font-family="ui-monospace" font-size="10" text-anchor="end">$5K</text>
+        <text x="50" y="160" fill="var(--muted)" font-family="ui-monospace" font-size="10" text-anchor="end">$10K</text>
+        <text x="50" y="100" fill="var(--muted)" font-family="ui-monospace" font-size="10" text-anchor="end">$15K</text>
+        <text x="50" y="50" fill="var(--muted)" font-family="ui-monospace" font-size="10" text-anchor="end">$/міс</text>
+
+        <!-- API cost line (linear with traffic) -->
+        <path id="apiLine" d="" fill="url(#apiGrad)" stroke="var(--api)" stroke-width="2.5"/>
+        <!-- Self-hosted cost line (flat then steps up) -->
+        <path id="selfLine" d="" fill="url(#selfGrad)" stroke="var(--self)" stroke-width="2.5" stroke-dasharray="6 3"/>
+        <!-- Breakeven point marker -->
+        <circle id="beDot" cx="0" cy="0" r="6" fill="var(--accent2)" stroke="#0b0d10" stroke-width="2"/>
+        <text id="beLbl" x="0" y="0" fill="var(--accent2)" font-family="ui-monospace" font-size="11" text-anchor="middle" font-weight="700">breakeven</text>
+        <!-- Legend -->
+        <rect x="600" y="50" width="160" height="50" fill="#11151a" stroke="var(--line)" rx="6"/>
+        <line x1="615" y1="68" x2="635" y2="68" stroke="var(--api)" stroke-width="2.5"/>
+        <text x="640" y="72" fill="var(--api)" font-family="ui-monospace" font-size="11">API ($/1M)</text>
+        <line x1="615" y1="86" x2="635" y2="86" stroke="var(--self)" stroke-width="2.5" stroke-dasharray="4 2"/>
+        <text x="640" y="90" fill="var(--self)" font-family="ui-monospace" font-size="11">Self-hosted</text>
+      </svg>
+      <div class="beControls">
+        <div class="beSlider">
+          <label>$ / 1M tokens (API)</label>
+          <input type="range" id="bePrice" min="2" max="15" step="0.5" value="6">
+          <div class="val" id="bePriceVal">$6.00</div>
+        </div>
+        <div class="beSlider">
+          <label>GPU $/місяць</label>
+          <input type="range" id="beGpu" min="1500" max="8000" step="500" value="3000">
+          <div class="val" id="beGpuVal">$3000</div>
+        </div>
+      </div>
+      <div class="beVerdict" id="beVerdict"></div>
+    </div>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Інженерний принцип:</b> вибір self-hosted інфраструктури повинен ґрунтуватися виключно на quantitative economic justification. Рекомендована стратегія — старт з API-провайдерів та міграція на self-hosted лише при наявності емпіричних даних, що демонструють економічну доцільність.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 4: MULTI-PROVIDER ROUTING ============================ -->
+  <section id="routing">
+    <h2><span class="num">04 ·</span> Multi-Provider Routing та Fallback стратегії</h2>
+    <p class="lead">Залежність production-системи від єдиного API-провайдера створює неприйнятні ризики availability. Інциденти на стороні провайдерів (OpenAI, Anthropic) відбуваються з регулярною періодичністю. Rate limits, цінові зміни, регіональна деградація latency є передбачуваними подіями. Архітектура multi-provider routing повинна закладатися на початковій стадії проектування системи.</p>
+
+    <h3>Класифікація операційних інцидентів за частотою та impact</h3>
+    <table>
+      <tr><th>Категорія інциденту</th><th>Частота</th><th>Наслідок без fallback</th></tr>
+      <tr><td>Provider outage (OpenAI, Anthropic)</td><td>2-5 разів на рік</td><td class="no">Service unavailable</td></tr>
+      <tr><td>Rate limit при пікових навантаженнях</td><td>Тижнева періодичність</td><td class="no">HTTP 503 на client side</td></tr>
+      <tr><td>Cost escalation через зміну pricing</td><td>Квартальна періодичність</td><td class="no">Перевищення budget forecasts</td></tr>
+      <tr><td>Регіональна деградація latency</td><td>Безперервна</td><td class="no">P99 TTFT &gt; 5s</td></tr>
+    </table>
+
+    <h3>Архітектура multi-provider routing: інтерактивна симуляція</h3>
+    <div class="routingBox">
+      <div class="routingHead">
+        <h4>LiteLLM як gateway шар</h4>
+        <button class="btn primary" id="routingPlay">Запустити симуляцію</button>
+        <button class="btn" id="routingReset">Reset</button>
+      </div>
+      <div class="routingStage">
+        <svg class="routingSvg" id="routingSvg" viewBox="0 0 800 340" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="rarr" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="var(--accent)"/>
+            </marker>
+          </defs>
+          <!-- Client -->
+          <rect x="30" y="140" width="120" height="60" fill="#15181d" stroke="var(--line)" stroke-width="2" rx="8"/>
+          <text x="90" y="165" text-anchor="middle" fill="#fff" font-family="ui-monospace" font-size="12" font-weight="700">Your App</text>
+          <text x="90" y="185" text-anchor="middle" fill="var(--muted)" font-family="ui-monospace" font-size="10">backend code</text>
+          <!-- Gateway (LiteLLM) -->
+          <rect id="gateway" x="250" y="120" width="140" height="100" fill="#1a1320" stroke="var(--routing)" stroke-width="2" rx="10"/>
+          <text x="320" y="148" text-anchor="middle" fill="var(--routing)" font-family="ui-monospace" font-size="12" font-weight="700">LiteLLM</text>
+          <text x="320" y="166" text-anchor="middle" fill="#fff" font-family="ui-monospace" font-size="11">Gateway</text>
+          <text x="320" y="186" text-anchor="middle" fill="var(--muted)" font-family="ui-monospace" font-size="10">+ fallback</text>
+          <text x="320" y="200" text-anchor="middle" fill="var(--muted)" font-family="ui-monospace" font-size="10">+ retry</text>
+          <text x="320" y="214" text-anchor="middle" fill="var(--muted)" font-family="ui-monospace" font-size="10">+ cost tracking</text>
+          <!-- Provider 1: OpenAI -->
+          <rect id="prov1" x="480" y="40" width="220" height="70" fill="#0e1318" stroke="var(--api)" stroke-width="2" rx="8"/>
+          <text x="590" y="65" text-anchor="middle" fill="var(--api)" font-family="ui-monospace" font-size="12" font-weight="700">① OpenAI</text>
+          <text x="590" y="83" text-anchor="middle" fill="#fff" font-family="ui-monospace" font-size="11">gpt-4o-mini</text>
+          <text x="590" y="99" text-anchor="middle" fill="var(--muted)" font-family="ui-monospace" font-size="10" id="prov1Status">primary · ✓ healthy</text>
+          <!-- Provider 2: Anthropic -->
+          <rect id="prov2" x="480" y="135" width="220" height="70" fill="#0e1318" stroke="var(--line)" stroke-width="2" rx="8"/>
+          <text x="590" y="160" text-anchor="middle" fill="var(--accent2)" font-family="ui-monospace" font-size="12" font-weight="700">② Anthropic</text>
+          <text x="590" y="178" text-anchor="middle" fill="#fff" font-family="ui-monospace" font-size="11">claude-haiku</text>
+          <text x="590" y="194" text-anchor="middle" fill="var(--muted)" font-family="ui-monospace" font-size="10" id="prov2Status">fallback · standby</text>
+          <!-- Provider 3: Together -->
+          <rect id="prov3" x="480" y="230" width="220" height="70" fill="#0e1318" stroke="var(--line)" stroke-width="2" rx="8"/>
+          <text x="590" y="255" text-anchor="middle" fill="var(--ok)" font-family="ui-monospace" font-size="12" font-weight="700">③ Together AI</text>
+          <text x="590" y="273" text-anchor="middle" fill="#fff" font-family="ui-monospace" font-size="11">llama-3.3-70b</text>
+          <text x="590" y="289" text-anchor="middle" fill="var(--muted)" font-family="ui-monospace" font-size="10" id="prov3Status">fallback · standby</text>
+          <!-- Arrows -->
+          <line x1="150" y1="170" x2="250" y2="170" stroke="var(--accent)" stroke-width="2" marker-end="url(#rarr)"/>
+          <line id="r1" x1="390" y1="155" x2="480" y2="75" stroke="var(--api)" stroke-width="2" opacity="0.4"/>
+          <line id="r2" x1="390" y1="170" x2="480" y2="170" stroke="var(--accent2)" stroke-width="2" opacity="0.2" stroke-dasharray="4 2"/>
+          <line id="r3" x1="390" y1="185" x2="480" y2="265" stroke="var(--ok)" stroke-width="2" opacity="0.2" stroke-dasharray="4 2"/>
+        </svg>
+      </div>
+      <div class="routingCaption" id="routingCaption">
+        <span class="step">SETUP</span> Конфігурація 3 провайдерів через LiteLLM. Primary — OpenAI gpt-4o-mini. Fallbacks — Anthropic Claude Haiku, потім Together Llama 3.3. Натисніть <b>"Запустити симуляцію"</b>, щоб побачити що відбувається при outage.
+      </div>
+    </div>
+
+    <h3>Класифікація routing strategies</h3>
+    <div class="grid3">
+      <div class="card">
+        <h4 style="color:var(--ok)">Cost-based routing</h4>
+        <p>Primary provider — модель з нижчою вартістю; fallback — модель з вищою точністю. Застосовується коли більшість запитів є типовими, а deep reasoning потрібен рідко.</p>
+      </div>
+      <div class="card">
+        <h4 style="color:var(--routing)">Quality-based routing</h4>
+        <p>Primary provider — модель з найвищою точністю; fallback — більш економна. Застосовується для premium tier обслуговування.</p>
+      </div>
+      <div class="card">
+        <h4 style="color:var(--api)">Latency-based routing</h4>
+        <p>Маршрутизація до найшвидшого регіону/провайдера на основі телеметрії. Застосовується для real-time interfaces та geo-distributed deployments.</p>
+      </div>
+    </div>
+
+    <h3>Класифікація tooling-рішень станом на 2026</h3>
+    <table>
+      <tr><th>Tool</th><th>Functional scope</th><th>Контекст застосування</th></tr>
+      <tr><td><b>LiteLLM</b></td><td>Multi-provider routing, fallback, cost tracking, caching</td><td>Default-вибір. Open-source, Python ecosystem.</td></tr>
+      <tr><td><b>Portkey</b></td><td>LiteLLM + observability + prompt versioning</td><td>Enterprise deployments з потребою у dashboard-інтерфейсі.</td></tr>
+      <tr><td><b>OpenRouter</b></td><td>Hosted gateway, 100+ моделей</td><td>Швидкий запуск без локальної інфраструктури.</td></tr>
+    </table>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Принцип архітектури:</b> прямий виклик SDK провайдерів з production-коду є антипатерном. Інтеграція gateway-шару (LiteLLM, Portkey) рекомендована незалежно від поточної кількості провайдерів. Vendor lock-in повинен бути проактивно усунений на стадії проектування, до моменту виникнення операційних обмежень.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 5: INFERENCE ENGINES + INTERNALS ============================ -->
+  <section id="engines">
+    <h2><span class="num">05 ·</span> Inference Engines та Performance Internals</h2>
+    <p class="lead">Self-hosted сценарії потребують компетенції у виборі inference engine. Глибока конфігурація компонентів належить до сфери ML platform engineering. Обов'язки AI engineer обмежуються коректним вибором інструменту відповідно до characteristics use case та уникненням архітектурних антипатернів.</p>
+
+    <h3>Порівняльна характеристика inference engines</h3>
+    <table>
+      <tr><th>Engine</th><th>Категорія</th><th>Контекст застосування</th><th>Обмеження</th></tr>
+      <tr><td><b>vLLM</b></td><td>High-throughput serving</td><td class="yes">Default для self-hosted. OpenAI-compatible API.</td><td>Не підтримує multi-modal serving (LLM + vision)</td></tr>
+      <tr><td><b>HuggingFace TGI</b></td><td>Serving</td><td>Глибока інтеграція з HF stack</td><td>Throughput нижчий за vLLM</td></tr>
+      <tr><td><b>NVIDIA Triton</b></td><td>Enterprise multi-model</td><td>Multi-model serving з governance</td><td>Надмірна складність для single-model deployments</td></tr>
+      <tr><td><b>Ollama / llama.cpp</b></td><td>Local, single-user</td><td>Прототипування, локальна розробка</td><td class="no">Непридатний для concurrent production traffic</td></tr>
+    </table>
+
+    <h3>Поширені архітектурні антипатерни</h3>
+    <ul class="checklist">
+      <li class="no"><b>transformers.pipeline() у production</b> — послідовна обробка запитів, throughput у 50-100 разів нижчий за vLLM. Архітектурна помилка з прихованим характером.</li>
+      <li class="no"><b>model.generate() прямий виклик</b> — призначений для дослідницьких задач, не для serving.</li>
+      <li class="no"><b>Ollama для multi-user сервісів</b> — модель з single-user семантикою, не масштабується за межі 10 concurrent requests.</li>
+      <li class="warn"><b>vLLM з default max-model-len 32K</b> — призводить до надмірного споживання VRAM на KV cache незалежно від реальної довжини prompts. Параметр повинен відповідати характеристикам use case.</li>
+    </ul>
+
+    <h3>Performance internals: концептуальний рівень</h3>
+    <div class="grid3">
+      <div class="card">
+        <h4>KV cache</h4>
+        <p>Споживання VRAM перевищує розмір weights моделі. Capacity planning повинно враховувати cache, а не лише weights. Залежність між довжиною context та кількістю concurrent users є обернено пропорційною.</p>
+      </div>
+      <div class="card">
+        <h4>Continuous batching</h4>
+        <p>vLLM та TGI забезпечують обробку batch=32 за час batch=1 завдяки memory-bound характеру операції. Підвищення throughput у ~40 разів порівняно зі static batching. Реалізовано через PagedAttention.</p>
+      </div>
+      <div class="card">
+        <h4>Prefix caching</h4>
+        <p>Повторне використання KV cache для статичних system prompts. Активація у vLLM: <code style="background:#0a0d12;padding:1px 4px;border-radius:3px;color:var(--accent);font-size:11px">--enable-prefix-caching</code>. Інкрементальне покращення TTFT.</p>
+      </div>
+    </div>
+
+    <h3>Практичний розрахунок capacity</h3>
+    <pre><span class="c">// Llama 3.1 8B на H100 80GB — скільки concurrent users?</span>
+<span class="k">Llama 3.1 8B weights</span> (fp16):       <span class="n">16 GB</span>
+<span class="k">KV cache</span> на 1 request (4K ctx):    <span class="n">~512 MB</span>
+<span class="k">Batch 32 users</span>:                   <span class="n">32 × 512 MB = 16 GB cache</span>
+─────────────────────────────────────────
+<span class="f">Total на H100 80GB</span>:                <span class="n">~50 concurrent users</span>
+
+<span class="c">// З AWQ quantization weights → 4 GB → ~200 users on same GPU</span></pre>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Capacity planning principle:</b> для product planning рекомендована метрика users-per-GPU замість tokens-per-second. Перша метрика враховує реальні обмеження KV cache та відповідає operational realities.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 6: STREAMING + TTFT ============================ -->
+  <section id="streaming">
+    <h2><span class="num">06 ·</span> Token Streaming та TTFT-driven UX</h2>
+    <p class="lead">Token streaming є фундаментальною вимогою UX для production AI-сервісів, а не optimization. У відсутності streaming сприйняття responsiveness системи деградує незалежно від objective latency. Розділ присвячено user perception та технічним вимогам реалізації.</p>
+
+    <h3>Ключові метрики латентності</h3>
+    <table>
+      <tr><th>Метрика</th><th>Визначення</th><th>Acceptable threshold</th></tr>
+      <tr><td><b>TTFT</b> (Time To First Token)</td><td>Інтервал від запиту до першого видимого токена</td><td class="yes">&lt; 500ms — оптимально, &lt; 1s — допустимо</td></tr>
+      <tr><td><b>TPOT</b> (Time Per Output Token)</td><td>Інтервал між послідовними токенами</td><td class="yes">30-50 tokens/sec — comfortable reading rate</td></tr>
+    </table>
+
+    <h3>Порівняльна симуляція: streaming vs non-streaming</h3>
+    <div class="streamBox">
+      <div class="streamGrid">
+        <div class="streamPanel no-stream">
+          <h5 style="color:var(--warn)">БЕЗ streaming</h5>
+          <div class="timer" id="noStreamTimer">0.0s</div>
+          <div id="noStreamContent" style="min-height:180px;display:flex;align-items:center;justify-content:center;flex-direction:column">
+            <div class="spinner"></div>
+            <div style="color:var(--muted);font-size:12px;text-align:center;margin-top:8px">Очікування відповіді...</div>
+          </div>
+          <div class="streamMetrics" id="noStreamMetrics">Натисніть "Запустити", щоб побачити різницю</div>
+        </div>
+        <div class="streamPanel stream">
+          <h5 style="color:var(--ok)">ЗІ streaming (SSE)</h5>
+          <div class="timer" id="streamTimer">0.0s</div>
+          <div class="streamText" id="streamContent" style="min-height:180px"></div>
+          <div class="streamMetrics" id="streamMetrics">Натисніть "Запустити"</div>
+        </div>
+      </div>
+      <div class="streamControls">
+        <button class="btn primary" id="streamPlay">Запустити порівняння</button>
+        <button class="btn" id="streamReset">Reset</button>
+      </div>
+    </div>
+
+    <h3>Implementation pattern: Server-Sent Events (SSE)</h3>
+    <pre><span class="c"># Backend (FastAPI)</span>
+<span class="k">from</span> fastapi.responses <span class="k">import</span> <span class="f">StreamingResponse</span>
+
+<span class="f">@app.post</span>(<span class="s">"/chat"</span>)
+<span class="k">async def</span> chat(request):
+    <span class="k">return</span> <span class="f">StreamingResponse</span>(
+        llm_stream(request),
+        media_type=<span class="s">"text/event-stream"</span>
+    )
+
+<span class="c">// Frontend (browser)</span>
+<span class="k">const</span> eventSource = <span class="k">new</span> <span class="f">EventSource</span>(<span class="s">'/chat'</span>);
+eventSource.onmessage = (e) => { ui.append(e.data); }
+eventSource.onerror = () => { eventSource.<span class="f">close</span>(); }</pre>
+
+    <h3>Додаткові переваги streaming архітектури</h3>
+    <div class="grid3">
+      <div class="card">
+        <h4>Request cancellation</h4>
+        <p>Інтеграція <code>AbortController</code> на client side забезпечує переривання generation при відмові клієнта від результату. Економія GPU resources на abandoned requests. Неможливо реалізувати без streaming.</p>
+      </div>
+      <div class="card">
+        <h4>Progressive rendering</h4>
+        <p>Інкрементальний рендеринг markdown, code blocks, lists у міру генерації. Забезпечує feedback користувачу про активний стан системи.</p>
+      </div>
+      <div class="card">
+        <h4>Mobile network resilience</h4>
+        <p>Скорочення часу утримання TCP connection. Стійкість до network switching (WiFi → cellular) під час сесії.</p>
+      </div>
+    </div>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>UX принцип:</b> streaming є обов'язковою вимогою для всіх user-facing chat interfaces. Для batch processing (звіти, аналітика, document pipelines) streaming не застосовується. Прийняття рішення повинно відбуватися на стадії проектування системи.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 7: STRUCTURED OUTPUTS ============================ -->
+  <section id="structured">
+    <h2><span class="num">07 ·</span> Structured Outputs та Function Calling</h2>
+    <p class="lead">Output production AI-сервісів переважно має структурований характер: JSON-документи для downstream систем або tool/function calls. Реалізація надійних структурованих outputs є окремою інженерною дисципліною, відсутність якої призводить до системних збоїв у production-середовищі.</p>
+
+    <h3>Класифікація проблем без structured outputs enforcement</h3>
+    <table>
+      <tr><th>Проблема</th><th>Технічний наслідок</th></tr>
+      <tr><td>Невалідний JSON output</td><td class="no">Parsing exception, retry overhead, додаткова latency та cost</td></tr>
+      <tr><td>Втрата полів або зміна типів</td><td class="no">HTTP 500 на downstream API</td></tr>
+      <tr><td>Markdown-обгортка ```json```</td><td class="no">Необхідність regex preprocessing, fragile код</td></tr>
+      <tr><td>Hallucinated field values</td><td class="no">Інконсистентність даних у persistence layer</td></tr>
+    </table>
+
+    <h3>Рівні schema enforcement у порядку зростання надійності</h3>
+    <div class="grid3">
+      <div class="card" style="border-left:3px solid var(--warn)">
+        <h4>Рівень 1: Prompt engineering</h4>
+        <p>System prompt з instructions ("respond as JSON") та few-shot examples. Надійність <b style="color:var(--warn)">70-90% valid</b>. Висока ймовірність збоїв на edge cases.</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--accent2)">
+        <h4>Рівень 2: JSON mode</h4>
+        <p><code>response_format: {"type": "json_object"}</code>. Гарантує <b style="color:var(--accent2)">99%+ syntactic validity</b>. Не гарантує відповідність schema на рівні полів та типів.</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--ok)">
+        <h4>Рівень 3: Structured outputs з schema</h4>
+        <p>Constrained decoding на основі Pydantic або JSON Schema. <b style="color:var(--ok)">100% schema compliance</b>. Industry standard.</p>
+      </div>
+    </div>
+
+    <h3>Приклад: structured output з Pydantic</h3>
+    <pre><span class="k">from</span> openai <span class="k">import</span> <span class="f">OpenAI</span>
+<span class="k">from</span> pydantic <span class="k">import</span> <span class="f">BaseModel</span>
+<span class="k">from</span> typing <span class="k">import</span> <span class="f">Literal</span>
+
+<span class="k">class</span> <span class="f">CustomerIssue</span>(<span class="f">BaseModel</span>):
+    customer_name: str | <span class="k">None</span>
+    urgency: <span class="f">Literal</span>[<span class="s">"low"</span>, <span class="s">"medium"</span>, <span class="s">"high"</span>, <span class="s">"critical"</span>]
+    summary: str
+
+response = client.beta.chat.completions.<span class="f">parse</span>(
+    model=<span class="s">"gpt-4o-mini"</span>,
+    messages=[...],
+    response_format=<span class="f">CustomerIssue</span>,   <span class="c"># ← schema enforced</span>
+)
+issue = response.choices[<span class="n">0</span>].message.parsed   <span class="c"># ← typed object</span></pre>
+
+    <h3>Function calling latency: архітектурний аналіз</h3>
+    <div class="pad" style="margin:14px 0">
+      Agent з N tool calls характеризується мультиплікативним зростанням total latency. Цей фактор є критичним для UX agent-based систем.
+    </div>
+    <pre><span class="c">// Типовий agent loop</span>
+LLM call 1 (decide tool)        → <span class="n">800ms</span>
+Tool execution                  → <span class="n">200ms</span>
+LLM call 2 (process result)     → <span class="n">800ms</span>
+Tool execution                  → <span class="n">200ms</span>
+LLM call 3 (final answer)       → <span class="n">1200ms</span>
+────────────────────────────────────────
+<span class="f">Total</span>:                          <span class="k">3200ms</span>  <span class="c"># 4× longer than single call</span></pre>
+
+    <h3>Стратегії оптимізації agent loops</h3>
+    <table>
+      <tr><th>Оптимізація</th><th>Effect</th></tr>
+      <tr><td><b>Parallel tool calls</b> (OpenAI native)</td><td class="yes">Зниження latency на 30-50% при наявності 2+ tools</td></tr>
+      <tr><td><b>Streaming agent reasoning</b></td><td class="yes">Покращення perceived latency</td></tr>
+      <tr><td><b>Tool call caching</b> для idempotent tools</td><td class="yes">До 80% скорочення для повторюваних запитів</td></tr>
+      <tr><td><b>Менша модель для tool selection</b></td><td class="yes">2-3× прискорення на routing steps</td></tr>
+    </table>
+
+    <h3>Класифікація tooling-рішень</h3>
+    <div class="grid4">
+      <div class="card">
+        <h4>OpenAI native</h4>
+        <p>Structured outputs, parallel tool calls, JSON schema enforcement. Найбільш зрілий developer experience.</p>
+      </div>
+      <div class="card">
+        <h4>Anthropic Claude</h4>
+        <p>Tool use API, prompt caching, structured XML output.</p>
+      </div>
+      <div class="card">
+        <h4>Instructor</h4>
+        <p>Python-бібліотека для застосування Pydantic schema до довільного LLM-провайдера.</p>
+      </div>
+      <div class="card">
+        <h4>LangGraph</h4>
+        <p>Framework для agent loops зі state management. Орієнтований на складні agent workflows.</p>
+      </div>
+    </div>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Architectural principle:</b> структуровані outputs зі schema enforcement є обов'язковими для будь-якого output, що передається у downstream систему. Free-form text допустимий виключно для presentation layer. Це вимога correctness, а не optimization.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 8: CACHING ============================ -->
+  <section id="caching">
+    <h2><span class="num">08 ·</span> Стратегії кешування</h2>
+    <p class="lead">Кешування у LLM-системах забезпечує 30-70% скорочення inference costs за умови коректної імплементації. AI engineer повинен володіти знаннями про три рівні кешування та вміти оцінити очікувану economy для конкретного use case.</p>
+
+    <h3>Багаторівнева архітектура кешування</h3>
+    <div class="cacheBox">
+      <div class="cachePyramid" id="cachePyramid">
+        <div class="cacheLayer active" data-layer="1">
+          <h5><span class="lvl">L1</span> Exact Match Cache (Redis)</h5>
+          <p>Hash(prompt + system_message) → cached response. Найнижчий рівень latency та operational cost.</p>
+          <div class="stats">
+            <span>Hit rate: <b>5-15%</b></span>
+            <span>Setup: <b>1 година</b></span>
+            <span>Cost: <b>$0</b></span>
+          </div>
+        </div>
+        <div class="cacheLayer" data-layer="2">
+          <h5><span class="lvl">L2</span> Prefix Cache (vLLM, OpenAI native)</h5>
+          <p>Повторне використання KV cache для system prompt prefix. При ідентичному system prompt prefill пропускає system tokens.</p>
+          <div class="stats">
+            <span>Hit rate: <b>70-90%</b></span>
+            <span>Setup: <b>1 прапор</b></span>
+            <span>TTFT win: <b>10-21×</b></span>
+          </div>
+        </div>
+        <div class="cacheLayer" data-layer="3">
+          <h5><span class="lvl">L3</span> Semantic Cache (embeddings + similarity)</h5>
+          <p>Query → embedding → similarity search → cached response для семантично подібного запиту. Покриває не лише ідентичні, а й семантично еквівалентні запити.</p>
+          <div class="stats">
+            <span>Hit rate: <b>20-60%</b></span>
+            <span>Setup: <b>1 день</b></span>
+            <span>Cost: <b>~$0.02 / 1M</b></span>
+          </div>
+        </div>
+      </div>
+      <div class="cacheTotal">
+        <div class="bigNum" id="cacheTotalNum">0%</div>
+        <div class="lbl">кумулятивне скорочення inference cost</div>
+      </div>
+    </div>
+
+    <h3>L1: Exact Match — приклад реалізації</h3>
+    <pre><span class="k">import</span> hashlib, redis, json
+
+cache = redis.<span class="f">Redis</span>(host=<span class="s">"localhost"</span>, port=<span class="n">6379</span>)
+
+<span class="k">def</span> <span class="f">cached_completion</span>(messages, model):
+    key = hashlib.<span class="f">sha256</span>(
+        json.<span class="f">dumps</span>(messages, sort_keys=<span class="k">True</span>).encode()
+    ).<span class="f">hexdigest</span>()
+
+    <span class="k">if</span> hit := cache.<span class="f">get</span>(key):
+        <span class="k">return</span> json.<span class="f">loads</span>(hit)
+
+    resp = client.chat.completions.<span class="f">create</span>(model=model, messages=messages)
+    cache.<span class="f">setex</span>(key, <span class="n">3600</span>, json.<span class="f">dumps</span>(resp))   <span class="c"># TTL 1 hour</span>
+    <span class="k">return</span> resp</pre>
+
+    <h3>L2: Prefix Cache — конфігурація</h3>
+    <pre><span class="c"># vLLM — активація через CLI-параметр</span>
+docker run vllm/vllm-openai \
+  --model TheBloke/Llama-3.1-8B-AWQ \
+  --quantization awq \
+  --enable-prefix-caching
+
+<span class="c"># OpenAI — автоматична активація у GPT-4o, discount 50% на cached tokens</span>
+<span class="c"># Anthropic — явна конфігурація через cache_control блоки у messages</span></pre>
+
+    <h3>Cumulative effect production caching stack</h3>
+    <table>
+      <tr><th>Layer</th><th>Hit rate</th><th>Operational cost</th><th>Scope економії</th></tr>
+      <tr><td>L1: Exact match Redis</td><td>10-20%</td><td>$0</td><td>Direct API calls на дублікатах запитів</td></tr>
+      <tr><td>L2: Prefix cache (vLLM)</td><td>70-90%</td><td>$0</td><td>Prefill tokens для статичних system prompts</td></tr>
+      <tr><td>L3: Semantic cache (LiteLLM)</td><td>20-40%</td><td>~$0.02 / 1M tokens</td><td>Семантично еквівалентні запити</td></tr>
+      <tr style="background:rgba(155,227,124,.08)"><td><b>Cumulative</b></td><td><b style="color:var(--ok)">40-60%</b></td><td><b>~$0</b></td><td><b>Загальне inference cost reduction</b></td></tr>
+    </table>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Принцип оптимізації:</b> впровадження caching strategy передує оптимізації моделі. Це інженерне рішення з найвищим ROI у домені inference cost reduction. Імплементація трирівневого кешу забезпечує 30-50% cost reduction за порівняно низькі інвестиції розробки.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 9: COST DISCIPLINE ============================ -->
+  <section id="cost">
+    <h2><span class="num">09 ·</span> Cost Discipline та Abuse Protection</h2>
+    <p class="lead">AI engineer несе відповідальність за <b style="color:#fff">economic integrity</b> сервісу. Один компрометований обліковий запис здатний вичерпати monthly budget за добу. Cost tracking та budget enforcement є обов'язковими інженерними практиками, що впроваджуються на початковій стадії проектування.</p>
+
+    <h3>Інтерактивний калькулятор: моделювання витрат</h3>
+    <div class="calcBox">
+      <div class="calcGrid">
+        <div class="calcInputs">
+          <div class="calcRow">
+            <label>Запитів / користувач / день</label>
+            <input type="range" id="calcReqs" min="10" max="5000" step="10" value="50">
+            <div class="val" id="calcReqsVal">50</div>
+          </div>
+          <div class="calcRow">
+            <label>Tokens / запит (avg)</label>
+            <input type="range" id="calcTokens" min="500" max="20000" step="100" value="3000">
+            <div class="val" id="calcTokensVal">3000</div>
+          </div>
+          <div class="calcRow">
+            <label>Активних користувачів</label>
+            <input type="range" id="calcUsers" min="100" max="100000" step="100" value="5000">
+            <div class="val" id="calcUsersVal">5000</div>
+          </div>
+          <div class="calcRow">
+            <label>$ / 1M tokens (gpt-4o-mini)</label>
+            <input type="range" id="calcPrice" min="0.5" max="15" step="0.5" value="0.6">
+            <div class="val" id="calcPriceVal">$0.6</div>
+          </div>
+          <div class="calcRow">
+            <label>Cache hit rate (%)</label>
+            <input type="range" id="calcCache" min="0" max="80" step="5" value="0">
+            <div class="val" id="calcCacheVal">0%</div>
+          </div>
+        </div>
+        <div class="calcResult" id="calcResult">
+          <div class="lbl">Місячний bill</div>
+          <div class="num" id="calcMonth">$0</div>
+          <div class="meta" id="calcMeta">0 tokens/день</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Структура вартості одного запиту: декомпозиція</h3>
+    <pre><span class="c">// Total request cost = input_tokens × in_price + output_tokens × out_price</span>
+<span class="c">// + embedding_calls × embedding_price   (часто не враховуються)</span>
+<span class="c">// + tool_call_chain × per_call_overhead (мультиплікативно у agent loops)</span>
+
+<span class="k">Приклад</span>: gpt-4o-mini agent loop
+  Input:       <span class="n">5000 tokens × $0.15/1M</span>   = <span class="n">$0.00075</span>
+  Output:      <span class="n">1500 tokens × $0.60/1M</span>   = <span class="n">$0.00090</span>
+  Embeddings:  <span class="n">10 calls × $0.00002</span>      = <span class="n">$0.0002</span>
+  Tool calls:  <span class="n">5 × overhead 1K tokens</span>   = <span class="n">$0.0008</span>
+  ─────────────────────────────────────────────────
+  <span class="f">Total</span>: <span class="n">~$0.005 per agent run</span>
+  <span class="k">100K agent runs / day</span> = <span class="f">$500/day</span> = <span class="f">$15K/month</span></pre>
+
+    <h3>Patterns abuse protection</h3>
+    <table>
+      <tr><th>Pattern</th><th>Імплементація</th></tr>
+      <tr><td><b>Per-user rate limit</b></td><td>Redis sliding window: N requests/hour, N tokens/day</td></tr>
+      <tr><td><b>Per-user budget cap</b></td><td>$X/month hard limit, request rejection при перевищенні</td></tr>
+      <tr><td><b>Anomaly detection</b></td><td>Статистичний аналіз cost-per-user (z-score deviation)</td></tr>
+      <tr><td><b>Prompt length limits</b></td><td>Обмеження max input tokens для anonymous tier</td></tr>
+      <tr><td><b>Tiered quotas</b></td><td>Free tier з token allocation, upgrade path для перевищення</td></tr>
+    </table>
+
+    <h3>LiteLLM: реалізація per-user budget</h3>
+    <pre><span class="k">import</span> litellm
+litellm.success_callback = [<span class="s">"langfuse"</span>]   <span class="c"># auto-track usage</span>
+
+user_budgets = {
+    <span class="s">"user_123"</span>: {<span class="s">"max_budget"</span>: <span class="n">100.0</span>, <span class="s">"current_spend"</span>: <span class="n">0</span>}
+}
+
+response = litellm.<span class="f">completion</span>(
+    model=<span class="s">"gpt-4o-mini"</span>,
+    messages=[...],
+    user=<span class="s">"user_123"</span>,                  <span class="c"># tracked per-user</span>
+    metadata={<span class="s">"feature"</span>: <span class="s">"summarizer"</span>}  <span class="c"># tracked per-feature</span>
+)
+<span class="c"># LiteLLM auto-blocks when budget exceeded</span></pre>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>Принцип безпеки:</b> AI-сервіс не повинен deployitis у production без імплементованого per-user cost cap. Відсутність budget enforcement створює неприйнятний фінансовий ризик: 100K-token промпт від одного джерела може вичерпати daily budget.
+    </div>
+  </section>
+
+  <!-- ============================ SECTION 10: PRODUCTION CHECKLIST ============================ -->
+  <section id="checklist">
+    <h2><span class="num">10 ·</span> Production Checklist та Latency Budget</h2>
+    <p class="lead">SLA для AI-систем не може бути визначений єдиним threshold (як "&lt; 500ms" для REST API). Необхідною є побудова <b style="color:#fff">latency budget</b> — декомпозиції часу за компонентами системи. Розділ містить production deployment checklist для верифікації готовності системи.</p>
+
+    <h3>Latency budget для RAG chatbot: декомпозиція</h3>
+    <div class="latBox">
+      <div class="latStack">
+        <div class="latRow"><div class="latLbl">Network round-trip</div><div class="latBar"><div class="latFill" style="width:5%;background:#5dade2">50ms</div></div></div>
+        <div class="latRow"><div class="latLbl">Auth + rate limit + tracing</div><div class="latBar"><div class="latFill" style="width:3%;background:#7cd1ff">30ms</div></div></div>
+        <div class="latRow"><div class="latLbl">RAG: embed + vector search</div><div class="latBar"><div class="latFill" style="width:8%;background:#ffd166">80ms</div></div></div>
+        <div class="latRow"><div class="latLbl">Context assembly</div><div class="latBar"><div class="latFill" style="width:4%;background:#ff7eb6">40ms</div></div></div>
+        <div class="latRow"><div class="latLbl">LLM TTFT (prefill)</div><div class="latBar"><div class="latFill" style="width:30%;background:#c79bff">300ms</div></div></div>
+        <div class="latRow"><div class="latLbl">LLM generation (streamed)</div><div class="latBar"><div class="latFill" style="width:48%;background:#9be37c">~10s streamed</div></div></div>
+        <div class="latRow"><div class="latLbl">Post-processing</div><div class="latBar"><div class="latFill" style="width:2%;background:#ff7676">20ms</div></div></div>
+      </div>
+      <div class="latTotal">
+        User-facing TTFT: <b>500ms</b> · Full response duration: <b>~11s</b> · Perceived latency через streaming: <span class="perceived">500ms</span>
+      </div>
+    </div>
+
+    <h3>Production SLA targets для AI-системи</h3>
+    <table>
+      <tr><th>Метрика</th><th>P50</th><th>P95</th><th>P99</th></tr>
+      <tr><td>TTFT</td><td class="yes">&lt; 500ms</td><td>&lt; 1s</td><td>&lt; 2s</td></tr>
+      <tr><td>TPOT</td><td class="yes">&lt; 30ms</td><td>&lt; 60ms</td><td>&lt; 100ms</td></tr>
+      <tr><td>Error rate</td><td class="yes">&lt; 0.1%</td><td>&lt; 0.5%</td><td>&lt; 1%</td></tr>
+      <tr><td>End-to-end perceived (зі streaming)</td><td class="yes">responsive</td><td>responsive</td><td>responsive</td></tr>
+    </table>
+
+    <h3>Case studies: типові production failures</h3>
+    <div class="failBox">
+      <div class="failNav" id="failNav">
+        <button class="failTab active" data-fail="1">1. silent update</button>
+        <button class="failTab" data-fail="2">2. no cost cap</button>
+        <button class="failTab" data-fail="3">3. huge prompt</button>
+        <button class="failTab" data-fail="4">4. no streaming</button>
+        <button class="failTab" data-fail="5">5. semantic leak</button>
+      </div>
+      <div class="failContent" id="failContent"></div>
+    </div>
+
+    <h3>Production deployment checklist</h3>
+    <div class="grid2">
+      <div>
+        <h3 style="color:var(--accent);font-size:12px">Architecture decisions</h3>
+        <ul class="checklist">
+          <li>Self-hosted vs API обґрунтовано через breakeven analysis</li>
+          <li>Multi-provider routing з fallbacks (LiteLLM/Portkey)</li>
+          <li>Caching strategy на 2-3 рівнях</li>
+          <li>Inference engine обраний під use case</li>
+        </ul>
+        <h3 style="color:var(--accent);font-size:12px;margin-top:14px">API design</h3>
+        <ul class="checklist">
+          <li>OpenAI-compatible endpoint для tooling compatibility</li>
+          <li>Token streaming через SSE</li>
+          <li>Structured outputs з schema для downstream JSON</li>
+          <li>Cancellation handling (AbortController)</li>
+          <li>Rate limiting per user (не лише global)</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="color:var(--accent);font-size:12px">Cost discipline</h3>
+        <ul class="checklist">
+          <li>Per-user budget cap (hard stop)</li>
+          <li>Cost tracking per user, feature, provider</li>
+          <li>Daily cost forecast і anomaly alerts</li>
+          <li>Semantic cache hit rate dashboard</li>
+        </ul>
+        <h3 style="color:var(--accent);font-size:12px;margin-top:14px">Monitoring (з уроку 15)</h3>
+        <ul class="checklist">
+          <li>TTFT, TPOT, cache hit rate у Prometheus</li>
+          <li>Alerts на P99 TTFT &gt; 2s, cost spike &gt; 3× baseline</li>
+          <li>Per-request cost tracking</li>
+          <li>Eval-based quality monitoring</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Reference architecture stack</h3>
+    <table>
+      <tr><th>Шар</th><th>Tool</th><th>Альтернатива</th></tr>
+      <tr><td>Gateway, routing</td><td><b>LiteLLM</b></td><td>Portkey, OpenRouter</td></tr>
+      <tr><td>Inference (self-hosted)</td><td><b>vLLM</b> з AWQ моделями</td><td>TGI, Triton</td></tr>
+      <tr><td>Caching</td><td><b>vLLM prefix + Redis exact + LiteLLM semantic</b></td><td>—</td></tr>
+      <tr><td>Frontend streaming</td><td><b>OpenAI-compatible + SSE</b></td><td>WebSockets</td></tr>
+      <tr><td>Structured outputs</td><td><b>Instructor (Pydantic)</b> або native OpenAI</td><td>LangGraph</td></tr>
+      <tr><td>Orchestration</td><td><b>K8s + KEDA</b> (lesson 14)</td><td>ECS</td></tr>
+      <tr><td>Monitoring</td><td><b>Prometheus + Grafana</b> (lesson 15)</td><td>Datadog</td></tr>
+      <tr><td>Tracing</td><td><b>OpenTelemetry → Langfuse</b></td><td>Honeycomb</td></tr>
+    </table>
+
+    <div class="keypoint" style="margin-top:14px">
+      <b>П'ять архітектурних принципів production LLM inference:</b>
+      <ol style="margin:10px 0 0 18px;padding:0;line-height:1.8">
+        <li>Прямий виклик LLM API з production-коду є антипатерном. Gateway layer є обов'язковим.</li>
+        <li>Deployment без streaming недопустимий для user-facing interfaces. TTFT є критичною метрикою.</li>
+        <li>Caching strategy є обов'язковою компонентою архітектури. Очікуване cost reduction — 30-70%.</li>
+        <li>Per-user cost cap є обов'язковою вимогою безпеки. Відсутність створює неприйнятний фінансовий ризик.</li>
+        <li>Output для downstream систем повинен мати enforced schema. Free-form JSON є джерелом regressions.</li>
+      </ol>
+    </div>
+
+    <h3>Підсумок розділу</h3>
+    <p class="pad">Урок формує <b>architecture mindset</b> у домені inference systems: економічний аналіз, decision frameworks, awareness технологічного landscape. Практичні Colab-вправи (vLLM benchmark, caching ROI, structured outputs comparison, multi-provider routing, latency budget audit) є опційним поглибленням. Ключова теза: компетенції AI engineer полягають у прийнятті архітектурних рішень щодо inference systems, не у низькорівневій оптимізації компонентів. Глибокий tuning належить до окремої професійної області з відмінною глибиною спеціалізації.</p>
+  </section>
+
+  <div class="footer">
+    <b>Production LLM Inference Systems</b> · Заняття 18 · AI Engineering Course<br>
+    Освітні результати: decision frameworks (API vs self-hosted, multi-provider routing, caching architecture), розуміння cost structure AI-сервісів, production deployment checklist.
+  </div>
+</div>
+
+<script>
+// === HERO: Cost bars animation ===
+function animateCostBars() {
+  const fills = document.querySelectorAll('#costBars .costFill');
+  fills.forEach((fill, i) => {
+    setTimeout(() => {
+      const target = parseInt(fill.dataset.target);
+      fill.style.width = target + '%';
+      fill.textContent = target + '%';
+    }, 300 + i * 200);
+  });
+}
+animateCostBars();
+
+// === DEMO 1: Three pillars selector ===
+const pillarData = {
+  latency: {
+    title: 'Latency-dominant use cases',
+    desc: '<b>Сфера застосування:</b> chat assistants, real-time interfaces, voice interfaces, code completion. <b>Поза сферою:</b> batch jobs, scheduled reports.',
+    bullets: [
+      '<b>Primary metric:</b> TTFT (Time To First Token). User perception threshold: &lt; 500ms — responsive, &gt; 2s — perceived as unavailable.',
+      '<b>Secondary metric:</b> TPOT (tokens/sec). Acceptable rate — 30-50 tokens/sec відповідає comfortable reading speed.',
+      '<b>Архітектурні рішення:</b> streaming через SSE, prefix caching, менші моделі для типових запитів, geo-distributed edge.',
+      '<b>Trade-off:</b> зниження throughput (через менший batch size) у обмін на покращення latency.',
+    ],
+  },
+  throughput: {
+    title: 'Throughput-dominant use cases',
+    desc: '<b>Сфера застосування:</b> batch document processing, embedding pipelines, scheduled analytics, content moderation. <b>Поза сферою:</b> per-request latency для індивідуального користувача.',
+    bullets: [
+      '<b>Primary metric:</b> requests per second або aggregate tokens/sec.',
+      '<b>Secondary metric:</b> $/1M tokens — оптимізація unit economics.',
+      '<b>Архітектурні рішення:</b> великий batch size, continuous batching через vLLM, async queue (Celery/RQ), без streaming.',
+      '<b>Trade-off:</b> зростання latency для індивідуального запиту у обмін на максимізацію aggregate throughput.',
+    ],
+  },
+  quality: {
+    title: 'Quality-dominant use cases',
+    desc: '<b>Сфера застосування:</b> medical diagnosis, legal document analysis, financial advisory, code generation для критичної інфраструктури.',
+    bullets: [
+      '<b>Primary metric:</b> accuracy, factuality, eval scores на golden dataset.',
+      '<b>Secondary metric:</b> hallucination rate, refusal rate.',
+      '<b>Архітектурні рішення:</b> моделі з найвищою точністю (GPT-4, Claude Opus), відсутність quantization, RAG для забезпечення контексту, ensemble voting.',
+      '<b>Trade-off:</b> latency та cost вторинні до correctness. Пріоритет — accuracy над response time.',
+    ],
+  },
+};
+let activePillar = 'latency';
+function renderPillar() {
+  const d = pillarData[activePillar];
+  document.querySelectorAll('.pillarCard').forEach(c => c.classList.toggle('active', c.dataset.pillar === activePillar));
+  let html = '<b style="font-size:14px">' + d.title + '</b><div style="margin:8px 0 12px;font-size:13px">' + d.desc + '</div><ul style="margin:0;padding-left:18px">';
+  d.bullets.forEach(b => { html += '<li style="margin:6px 0">' + b + '</li>'; });
+  html += '</ul>';
+  document.getElementById('pillarDetail').innerHTML = html;
+}
+document.querySelectorAll('.pillarCard').forEach(c => {
+  c.addEventListener('click', () => { activePillar = c.dataset.pillar; renderPillar(); });
+});
+renderPillar();
+
+// === DEMO 2: Decision tree (Self-hosted vs API) ===
+const dtree = {
+  start: {
+    q: 'Чи перевищує traffic 10M tokens/день?',
+    opts: [
+      {label: 'Так', cls: 'yes', next: 'compliance'},
+      {label: 'Ні', cls: 'no', next: 'api-simple'},
+    ],
+  },
+  'compliance': {
+    q: 'Чи присутні compliance вимоги (HIPAA, GDPR, internal data policy)?',
+    opts: [
+      {label: 'Так', cls: 'yes', next: 'self-required'},
+      {label: 'Ні', cls: 'no', next: 'devops'},
+    ],
+  },
+  'devops': {
+    q: 'Чи доступна команда з компетенціями DevOps для GPU infrastructure?',
+    opts: [
+      {label: 'Так', cls: 'yes', next: 'self-justified'},
+      {label: 'Ні', cls: 'no', next: 'api-still'},
+    ],
+  },
+  'api-simple': {
+    result: 'api',
+    verdict: 'Рекомендація: API провайдер',
+    body: 'При traffic &lt; 10M tokens/день API забезпечує економічну перевагу. Розрахунок: $0.6-15/1M tokens × 10M × 30 days = <b>$180-4500/month</b>, що нижче за сукупні витрати на GPU rental та DevOps команду. Перехід на self-hosted економічно не виправданий за відсутності значного traffic.',
+  },
+  'self-required': {
+    result: 'self',
+    verdict: 'Рекомендація: Self-hosted (compliance constraint)',
+    body: 'Compliance вимоги (medical data, financial information, GDPR-restricted PII) виключають можливість використання API-провайдерів. Необхідні компоненти: <b>GPU infrastructure</b> (H100/A100), <b>DevOps команда</b>, очікуваний <b>breakeven період — 6 місяців</b>. Reference stack: vLLM + Kubernetes.',
+  },
+  'self-justified': {
+    result: 'self',
+    verdict: 'Рекомендація: Self-hosted (economic justification)',
+    body: 'При traffic &gt; 10M tokens/день та наявності DevOps команди self-hosted забезпечує <b>5-10× cost reduction</b> порівняно з API. Reference stack: <b>vLLM з AWQ-квантованими моделями</b> на H100. Breakeven період — 4-6 місяців. Архітектурні фактори: <b>capacity planning</b> (users-per-GPU), <b>multi-region failover</b>, <b>model versioning strategy</b>.',
+  },
+  'api-still': {
+    result: 'api',
+    verdict: 'Рекомендація: API провайдер до моменту масштабування DevOps',
+    body: 'Self-hosted інфраструктура без компетентної DevOps команди створює неприйнятний операційний ризик. Управління GPU кластером, monitoring, incident response 24/7, model deployment pipelines потребують повноцінної команди (2-3 senior engineers). Рекомендована стратегія: продовження використання API + multi-provider routing, hire DevOps engineers при досягненні traffic, що виправдовує відповідний budget.',
+  },
+};
+let dtreeNode = 'start';
+function renderDtree() {
+  const node = dtree[dtreeNode];
+  if (node.result) {
+    document.getElementById('dtreeQ').style.display = 'none';
+    document.getElementById('dtreeOpts').style.display = 'none';
+    const r = document.getElementById('dtreeResult');
+    r.className = 'dtreeResult active ' + node.result;
+    r.innerHTML = '<div class="verdict">' + node.verdict + '</div>' + node.body;
+  } else {
+    document.getElementById('dtreeQ').style.display = 'block';
+    document.getElementById('dtreeOpts').style.display = 'flex';
+    document.getElementById('dtreeResult').className = 'dtreeResult';
+    document.getElementById('dtreeQ').textContent = node.q;
+    const opts = document.getElementById('dtreeOpts');
+    opts.innerHTML = '';
+    node.opts.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'dtreeBtn ' + o.cls;
+      b.textContent = o.label;
+      b.addEventListener('click', () => { dtreeNode = o.next; renderDtree(); });
+      opts.appendChild(b);
+    });
+  }
+}
+document.getElementById('dtreeReset').addEventListener('click', () => { dtreeNode = 'start'; renderDtree(); });
+renderDtree();
+
+// === DEMO 3: Breakeven graph ===
+function renderBreakeven() {
+  const apiPrice = parseFloat(document.getElementById('bePrice').value);
+  const gpuCost = parseInt(document.getElementById('beGpu').value);
+  document.getElementById('bePriceVal').textContent = '$' + apiPrice.toFixed(2);
+  document.getElementById('beGpuVal').textContent = '$' + gpuCost;
+
+  // SVG geom: x 60..760 maps to 0..50M tokens/day, y 280..40 maps to $0..$18K/mo
+  const x0 = 60, xMax = 760, y0 = 280, yTop = 40;
+  const tokensMax = 50; // M/day
+  const yScale = (y0 - yTop) / 18000; // px per $
+
+  // API line: monthly cost = (tokens M/day × 30) × apiPrice
+  // At x=tokensMax (50M): cost = 50 × 30 × apiPrice = 1500 × apiPrice
+  const apiAtMax = tokensMax * 30 * apiPrice;
+  const apiYatMax = Math.max(yTop, y0 - apiAtMax * yScale);
+  document.getElementById('apiLine').setAttribute('d',
+    `M${x0},${y0} L${xMax},${apiYatMax} L${xMax},${y0} Z`);
+
+  // Self-hosted: flat at gpuCost (~3K-8K depending on slider)
+  // But scales: 1 H100 handles ~30M tokens/day, then need 2x
+  const ySelf = y0 - gpuCost * yScale;
+  const ySelf2 = y0 - (gpuCost * 2) * yScale;
+  const selfBreak = (xMax - x0) * (30 / tokensMax) + x0; // x where 30M/day
+  document.getElementById('selfLine').setAttribute('d',
+    `M${x0},${ySelf} L${selfBreak},${ySelf} L${selfBreak},${ySelf2} L${xMax},${ySelf2} L${xMax},${y0} L${x0},${y0} Z`);
+
+  // Breakeven: when API > GPU. monthly_api = tokens × 30 × apiPrice = gpuCost
+  // tokens (M/day) = gpuCost / (30 × apiPrice)
+  const beTokens = gpuCost / (30 * apiPrice);
+  const beX = x0 + (beTokens / tokensMax) * (xMax - x0);
+  const beY = y0 - gpuCost * yScale;
+  if (beTokens <= tokensMax) {
+    document.getElementById('beDot').setAttribute('cx', beX);
+    document.getElementById('beDot').setAttribute('cy', beY);
+    document.getElementById('beLbl').setAttribute('x', beX);
+    document.getElementById('beLbl').setAttribute('y', beY - 12);
+    document.getElementById('beLbl').textContent = beTokens.toFixed(1) + 'M/day';
+    document.getElementById('beDot').style.display = '';
+    document.getElementById('beLbl').style.display = '';
+  } else {
+    document.getElementById('beDot').style.display = 'none';
+    document.getElementById('beLbl').style.display = 'none';
+  }
+
+  // Verdict
+  const v = document.getElementById('beVerdict');
+  if (beTokens > 30) {
+    v.className = 'beVerdict win-api';
+    v.innerHTML = `При <b>$${apiPrice}/1M</b> та <b>$${gpuCost} GPU rental</b> breakeven досягається при ${beTokens.toFixed(1)}M tokens/day. <b style="color:var(--api)">API-провайдер є економічно оптимальним вибором.</b>`;
+  } else if (beTokens < 5) {
+    v.className = 'beVerdict win-self';
+    v.innerHTML = `При <b>$${apiPrice}/1M</b> та <b>$${gpuCost} GPU rental</b> breakeven досягається при ${beTokens.toFixed(1)}M tokens/day. <b style="color:var(--self)">Self-hosted інфраструктура економічно виправдана навіть для startup traffic.</b>`;
+  } else {
+    v.className = 'beVerdict';
+    v.innerHTML = `Breakeven при <b>${beTokens.toFixed(1)}M tokens/день</b>. Нижче — API економічно ефективніший. Вище — self-hosted. <b>Zone of consideration</b>: рішення вимагає врахування DevOps overhead.`;
+  }
+}
+document.getElementById('bePrice').addEventListener('input', renderBreakeven);
+document.getElementById('beGpu').addEventListener('input', renderBreakeven);
+renderBreakeven();
+
+// === DEMO 4: Multi-provider routing simulation ===
+let routingStep = 0;
+const routingSteps = [
+  {
+    caption: '<span class="step">SETUP</span> Конфігурація трьох провайдерів через LiteLLM. Primary — OpenAI gpt-4o-mini. Fallback chain — Anthropic Claude Haiku, далі Together Llama 3.3. Запустіть симуляцію для демонстрації поведінки системи при provider outage.',
+    p1: 'primary · healthy', p1c: 'var(--muted)', p1stroke: 'var(--api)',
+    p2: 'fallback · standby', p2c: 'var(--muted)', p2stroke: 'var(--line)',
+    p3: 'fallback · standby', p3c: 'var(--muted)', p3stroke: 'var(--line)',
+    r1op: '0.4', r2op: '0.2', r3op: '0.2',
+  },
+  {
+    caption: '<span class="step">STEP 1</span> Steady state: 100% запитів маршрутизуються на OpenAI. Anthropic та Together у standby з health-checks кожні 30 секунд. <b>Latency:</b> ~300ms. <b>Cost:</b> $0.6/1M tokens.',
+    p1: 'primary · 100% traffic', p1c: 'var(--ok)', p1stroke: 'var(--api)',
+    p2: 'standby · healthy', p2c: 'var(--muted)', p2stroke: 'var(--line)',
+    p3: 'standby · healthy', p3c: 'var(--muted)', p3stroke: 'var(--line)',
+    r1op: '1', r2op: '0.2', r3op: '0.2',
+  },
+  {
+    caption: '<span class="step">STEP 2</span> <b style="color:var(--warn)">OpenAI outage:</b> health-check failed. LiteLLM circuit breaker activated. Traffic автоматично маршрутизується на <b>Anthropic Claude</b>. Імплементація не потребує custom коду. End-user impact: відсутній. Latency overhead +50ms через retry mechanism.',
+    p1: 'primary · DOWN', p1c: 'var(--warn)', p1stroke: 'var(--warn)',
+    p2: 'fallback · 100% traffic', p2c: 'var(--ok)', p2stroke: 'var(--accent2)',
+    p3: 'standby · healthy', p3c: 'var(--muted)', p3stroke: 'var(--line)',
+    r1op: '0.15', r2op: '1', r3op: '0.2',
+  },
+  {
+    caption: '<span class="step">STEP 3</span> <b style="color:var(--warn)">Cascading failure: Anthropic досягнув rate limit.</b> LiteLLM активує наступний fallback: <b>Together AI Llama 3.3 70B</b>. Сервіс продовжує функціонування. Cascade failover логується, end-user отримує responses без HTTP 503 errors.',
+    p1: 'primary · DOWN', p1c: 'var(--warn)', p1stroke: 'var(--warn)',
+    p2: 'fallback · 429 rate limit', p2c: 'var(--warn)', p2stroke: 'var(--warn)',
+    p3: 'fallback · 100% traffic', p3c: 'var(--ok)', p3stroke: 'var(--ok)',
+    r1op: '0.15', r2op: '0.15', r3op: '1',
+  },
+  {
+    caption: '<span class="step">STEP 4</span> Після 5 хвилин OpenAI service restored. Health-check passed. <b>LiteLLM поступово повертає traffic на primary</b>. Без manual intervention, без downtime. Підсумок інциденту: <b>0 failed requests</b> на client side, P99 latency overhead +100-200ms протягом події. Це є очікуваний value multi-provider routing.',
+    p1: 'primary · recovered', p1c: 'var(--ok)', p1stroke: 'var(--api)',
+    p2: 'standby · healthy', p2c: 'var(--muted)', p2stroke: 'var(--line)',
+    p3: 'standby · healthy', p3c: 'var(--muted)', p3stroke: 'var(--line)',
+    r1op: '1', r2op: '0.2', r3op: '0.2',
+  },
+];
+function renderRouting() {
+  const s = routingSteps[routingStep];
+  document.getElementById('routingCaption').innerHTML = s.caption;
+  document.getElementById('prov1Status').textContent = s.p1;
+  document.getElementById('prov1Status').setAttribute('fill', s.p1c);
+  document.getElementById('prov1').setAttribute('stroke', s.p1stroke);
+  document.getElementById('prov2Status').textContent = s.p2;
+  document.getElementById('prov2Status').setAttribute('fill', s.p2c);
+  document.getElementById('prov2').setAttribute('stroke', s.p2stroke);
+  document.getElementById('prov3Status').textContent = s.p3;
+  document.getElementById('prov3Status').setAttribute('fill', s.p3c);
+  document.getElementById('prov3').setAttribute('stroke', s.p3stroke);
+  document.getElementById('r1').setAttribute('opacity', s.r1op);
+  document.getElementById('r2').setAttribute('opacity', s.r2op);
+  document.getElementById('r3').setAttribute('opacity', s.r3op);
+}
+let routingTimer = null;
+document.getElementById('routingPlay').addEventListener('click', () => {
+  if (routingTimer) clearInterval(routingTimer);
+  routingStep = 0;
+  renderRouting();
+  routingTimer = setInterval(() => {
+    routingStep++;
+    if (routingStep >= routingSteps.length) { clearInterval(routingTimer); return; }
+    renderRouting();
+  }, 2500);
+});
+document.getElementById('routingReset').addEventListener('click', () => {
+  if (routingTimer) clearInterval(routingTimer);
+  routingStep = 0;
+  renderRouting();
+});
+renderRouting();
+
+// === DEMO 5: Streaming vs no-streaming ===
+const streamSample = "Production AI-сервіс повинен використовувати streaming для всіх user-facing chat interfaces. Це фундаментальна вимога UX, а не optimization. У сценарії без streaming перший токен з'являється з затримкою 12 секунд. Зі streaming TTFT становить 300 мілісекунд.";
+let streamAnim = null;
+let noStreamAnim = null;
+function resetStream() {
+  if (streamAnim) clearInterval(streamAnim);
+  if (noStreamAnim) clearTimeout(noStreamAnim);
+  document.getElementById('noStreamContent').innerHTML = '<div class="spinner"></div><div style="color:var(--muted);font-size:12px;text-align:center;margin-top:8px">Очікування response...</div>';
+  document.getElementById('noStreamTimer').textContent = '0.0s';
+  document.getElementById('noStreamMetrics').innerHTML = 'Запустіть симуляцію для порівняння режимів';
+  document.getElementById('streamContent').textContent = '';
+  document.getElementById('streamTimer').textContent = '0.0s';
+  document.getElementById('streamMetrics').innerHTML = 'Запустіть симуляцію';
+}
+function playStream() {
+  resetStream();
+  const startTime = Date.now();
+  // No-stream: nothing for 8 seconds, then full text appears
+  const noStreamDuration = 8000;
+  const noStreamUpdater = setInterval(() => {
+    const el = Date.now() - startTime;
+    document.getElementById('noStreamTimer').textContent = (el/1000).toFixed(1) + 's';
+    if (el >= noStreamDuration) {
+      clearInterval(noStreamUpdater);
+      document.getElementById('noStreamContent').innerHTML = '<div style="font-size:13px;line-height:1.6;color:#cdd5de">' + streamSample + '</div>';
+      document.getElementById('noStreamMetrics').innerHTML = '<span class="warn">TTFT: 8.0s — perceived як service failure</span>';
+    }
+  }, 100);
+  noStreamAnim = noStreamUpdater;
+
+  // Stream: first token at 300ms, then ~50ms per word
+  let charIdx = 0;
+  setTimeout(() => {
+    document.getElementById('streamTimer').textContent = '0.3s';
+    document.getElementById('streamMetrics').innerHTML = '<span class="ok">TTFT: 300ms — first token delivered</span>';
+    streamAnim = setInterval(() => {
+      charIdx += 2;
+      const txt = streamSample.substring(0, charIdx);
+      document.getElementById('streamContent').innerHTML = txt + '<span class="streamCursor"></span>';
+      const el = Date.now() - startTime;
+      document.getElementById('streamTimer').textContent = (el/1000).toFixed(1) + 's';
+      if (charIdx >= streamSample.length) {
+        clearInterval(streamAnim);
+        document.getElementById('streamContent').innerHTML = streamSample;
+        document.getElementById('streamMetrics').innerHTML = '<span class="ok">TTFT 300ms · TPOT ~40 tok/s · perceived як responsive</span>';
+      }
+    }, 35);
+  }, 300);
+}
+document.getElementById('streamPlay').addEventListener('click', playStream);
+document.getElementById('streamReset').addEventListener('click', resetStream);
+
+// === DEMO 6: Cache pyramid (cumulative savings) ===
+const layerSavings = {1: 15, 2: 35, 3: 25};
+let activeLayers = new Set([1]);
+function renderCache() {
+  document.querySelectorAll('.cacheLayer').forEach(l => {
+    const lvl = parseInt(l.dataset.layer);
+    l.classList.toggle('active', activeLayers.has(lvl));
+  });
+  // Cumulative savings (not pure sum — diminishing returns)
+  let saved = 0;
+  let remaining = 100;
+  [1,2,3].forEach(lvl => {
+    if (activeLayers.has(lvl)) {
+      const layerHit = layerSavings[lvl];
+      const layerSaved = (remaining * layerHit / 100);
+      saved += layerSaved;
+      remaining -= layerSaved;
+    }
+  });
+  document.getElementById('cacheTotalNum').textContent = Math.round(saved) + '%';
+}
+document.querySelectorAll('.cacheLayer').forEach(l => {
+  l.addEventListener('click', () => {
+    const lvl = parseInt(l.dataset.layer);
+    if (activeLayers.has(lvl)) activeLayers.delete(lvl);
+    else activeLayers.add(lvl);
+    renderCache();
+  });
+});
+renderCache();
+
+// === DEMO 7: Cost calculator ===
+function calcCost() {
+  const reqs = parseInt(document.getElementById('calcReqs').value);
+  const tokens = parseInt(document.getElementById('calcTokens').value);
+  const users = parseInt(document.getElementById('calcUsers').value);
+  const price = parseFloat(document.getElementById('calcPrice').value);
+  const cache = parseInt(document.getElementById('calcCache').value);
+  document.getElementById('calcReqsVal').textContent = reqs;
+  document.getElementById('calcTokensVal').textContent = tokens;
+  document.getElementById('calcUsersVal').textContent = users.toLocaleString();
+  document.getElementById('calcPriceVal').textContent = '$' + price;
+  document.getElementById('calcCacheVal').textContent = cache + '%';
+
+  const dailyTokens = reqs * tokens * users;
+  const monthlyTokens = dailyTokens * 30;
+  const cost = (monthlyTokens / 1_000_000) * price * (1 - cache / 100);
+  document.getElementById('calcMonth').textContent = '$' + Math.round(cost).toLocaleString();
+  document.getElementById('calcMeta').textContent = (dailyTokens / 1_000_000).toFixed(1) + 'M tokens/день';
+
+  const r = document.getElementById('calcResult');
+  r.classList.toggle('safe', cost < 5000);
+}
+['calcReqs','calcTokens','calcUsers','calcPrice','calcCache'].forEach(id => {
+  document.getElementById(id).addEventListener('input', calcCost);
+});
+calcCost();
+
+// === DEMO 8: Failure stories carousel ===
+const failData = {
+  1: {
+    title: 'Silent model update провайдера: deprecation prompt compatibility',
+    tags: ['model drift', '2024'],
+    body: 'Команда налаштувала prompt під <code>gpt-4-turbo-2024-04-09</code>. JSON output validity досягав 99.5%. Через 6 місяців провайдер виконав silent update моделі (alias <code>gpt-4-turbo</code> почав резолвити на новішу версію). Output formatting зазнав змін: модель почала додавати markdown ```json``` обгортки. JSON valid rate деградував до 70%. Production system отримав systematic parsing failures.',
+    lesson: 'Обов\'язкове <b>pinning specific model versions</b> у production. Використання <code>gpt-4-turbo-2024-04-09</code> замість <code>gpt-4-turbo</code>. Regression eval перед переходом на нову версію моделі.',
+  },
+  2: {
+    title: 'Відсутність cost cap: $30K incident протягом 12 годин',
+    tags: ['abuse', 'no budget'],
+    body: 'Startup запустив AI chatbot на GPT-4 без per-user rate limit та budget cap. Deployment виконано у п\'ятницю ввечері. У суботу виявлено vulnerability у frontend (можливість передачі довгого conversation history). Створено скрипт, що генерував запити з 10-token prompt та 100K-token контекстом. За ніч згенеровано $30K API costs. Інцидент response: emergency service shutdown, переговори з провайдером про refund.',
+    lesson: 'Обов\'язкові заходи на day 1: <b>per-user rate limit, per-user budget cap, prompt length limit, anomaly alerts на cost spike</b>. Імплементаційна складність кожного компонента низька, ROI у запобіганні аналогічним інцидентам — значний.',
+  },
+  3: {
+    title: 'Head-of-line blocking при long-context запитах',
+    tags: ['head-of-line blocking'],
+    body: 'Сервіс на vLLM з 50 concurrent users у нормальному режимі навантаження. Один користувач (автоматизований crawler) почав надсилати запити з повним PDF (100K tokens) у prompt. Prefill кожного такого запиту тривав 8-12 секунд, блокуючи інші запити у queue. P99 latency для всіх користувачів зросла з 500ms до 15s. GPU utilization 100%, incoming queue росте.',
+    lesson: 'Імплементація <b>max input tokens limit</b> per user tier (anonymous = 4K, paid = 32K). <b>Окрема queue</b> для long-context запитів. Моніторинг <b>p99 prefill time</b> окремо від p99 total response time.',
+  },
+  4: {
+    title: 'Відсутність streaming: 30% session abandonment',
+    tags: ['UX', 'no streaming'],
+    body: 'Внутрішній support chatbot для співробітників. MVP без streaming — JSON response повертався після завершення generation. Тривалість generation 8-12 секунд для типових запитів. 30% користувачів виконували refresh або закривали вікно протягом перших 5 секунд, сприймаючи систему як unavailable. Engagement metrics deteriorated, NPS score нижче за традиційний search. Команда initially діагностувала проблему як quality issue моделі.',
+    lesson: 'Streaming не є опціональним. Будь-який user-facing chat — <b>SSE з day 1</b>. Frontend повинен відображати "AI generating..." indicator. Це baseline UX вимога, а не optimization.',
+  },
+  5: {
+    title: 'Privacy leak через semantic cache cross-user',
+    tags: ['semantic cache', 'privacy'],
+    body: 'Caching стратегія L1 + L3 (exact + semantic) без per-user namespacing. User A надіслав запит: "Скільки залишилося на моєму рахунку?" — модель повернула баланс. Embedding закешовано. User B через 10 хвилин надіслав: "Який мій баланс?" — semantic similarity 0.96 → cache hit → User B отримав баланс User A. Privacy incident, compliance review, legal escalation.',
+    lesson: 'Semantic cache <b>не повинен застосовуватися для user-specific даних без per-user namespacing</b>. Cache key повинен включати <code>user_id</code>. Embeddings зберігаються у окремих namespaces per user. Це compliance requirement, не optional best practice.',
+  },
+};
+function renderFail(id) {
+  const d = failData[id];
+  let html = '<h4>' + d.title + '</h4>';
+  d.tags.forEach(t => { html += '<span class="tag">' + t + '</span>'; });
+  html += '<div style="margin:10px 0">' + d.body + '</div>';
+  html += '<div class="lesson"><b>Lesson:</b> ' + d.lesson + '</div>';
+  document.getElementById('failContent').innerHTML = html;
+  document.querySelectorAll('.failTab').forEach(t => t.classList.toggle('active', parseInt(t.dataset.fail) === id));
+}
+document.querySelectorAll('.failTab').forEach(t => {
+  t.addEventListener('click', () => renderFail(parseInt(t.dataset.fail)));
+});
+renderFail(1);
+</script>
+</body>
+</html>
